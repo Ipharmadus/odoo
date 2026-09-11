@@ -18,6 +18,8 @@
         <field name="inherit_id" ref="sale.view_order_product_pivot"/>
         <field name="arch" type="xml">
             <field name="date" position="after">
+                <field name="partner_category_id" type="row"/>
+                <field name="partner_category_parent_id" type="row"/>
                 <field name="pharmadus_line_id" type="row"/>
                 <field name="pharmadus_subline_id" type="row"/>
             </field>
@@ -30,10 +32,14 @@
         <field name="inherit_id" ref="sale.view_order_product_search"/>
         <field name="arch" type="xml">
             <field name="product_tmpl_id" position="after">
+                <field name="partner_category_id"/>
+                <field name="partner_category_parent_id"/>
                 <field name="pharmadus_line_id"/>
                 <field name="pharmadus_subline_id"/>
             </field>
             <filter name="Category" position="after">
+                <filter string="Categoría de empresa" name="group_by_partner_category" context="{'group_by':'partner_category_id'}"/>
+                <filter string="Categoría padre de empresa" name="group_by_partner_category_parent" context="{'group_by':'partner_category_parent_id'}"/>
                 <filter string="Línea" name="group_by_pharmadus_line" context="{'group_by':'pharmadus_line_id'}"/>
                 <filter string="SubLínea" name="group_by_pharmadus_subline" context="{'group_by':'pharmadus_subline_id'}"/>
             </filter>
@@ -85,6 +91,12 @@
         <field name="model">account.invoice.report</field>
         <field name="inherit_id" ref="account.account_invoice_report_view_tree"/>
         <field name="arch" type="xml">
+            <field name="partner_id" position="after">
+                <field name="commercial_partner_id" string="Entidad comercial" optional="show"/>
+                <field name="partner_shipping_id" string="Dirección de entrega" optional="show"/>
+                <field name="partner_category_id" string="Categoría de empresa" optional="show"/>
+                <field name="partner_category_parent_id" string="Categoría padre de empresa" optional="show"/>
+            </field>
             <field name="product_id" position="after">
                 <field
                     name="pharmadus_line_id"
@@ -116,6 +128,12 @@
         <field name="inherit_id" ref="account.view_account_invoice_report_pivot"/>
         <field name="arch" type="xml">
             <field name="invoice_date" position="after">
+                <field name="commercial_partner_id" string="Entidad comercial" type="row"/>
+                <field name="partner_shipping_id" string="Dirección de entrega" type="row"/>
+                <field name="partner_category_id" string="Categoría de empresa" type="row"/>
+                <field name="partner_category_parent_id" string="Categoría padre de empresa" type="row"/>
+            </field>
+            <field name="invoice_date" position="after">
                 <field
                     name="pharmadus_line_id"
                     type="row"
@@ -145,6 +163,12 @@
         <field name="model">account.invoice.report</field>
         <field name="inherit_id" ref="account.view_account_invoice_report_search"/>
         <field name="arch" type="xml">
+            <field name="partner_id" position="after">
+                <field name="commercial_partner_id" string="Entidad comercial"/>
+                <field name="partner_shipping_id" string="Dirección de entrega"/>
+                <field name="partner_category_id" string="Categoría de empresa"/>
+                <field name="partner_category_parent_id" string="Categoría padre de empresa"/>
+            </field>
             <field name="product_id" position="after">
                 <field
                     name="pharmadus_line_id"
@@ -187,6 +211,26 @@
                     name="group_by_invoice_pharmadus_purchase_subline"
                     context="{'group_by':'pharmadus_purchase_subline_id'}"
                     invisible="context.get('pharmadus_hide_purchase_specs')"
+                />
+                <filter
+                    string="Entidad comercial"
+                    name="group_by_invoice_commercial_partner"
+                    context="{'group_by':'commercial_partner_id'}"
+                />
+                <filter
+                    string="Dirección de entrega"
+                    name="group_by_invoice_partner_shipping"
+                    context="{'group_by':'partner_shipping_id'}"
+                />
+                <filter
+                    string="Categoría de empresa"
+                    name="group_by_invoice_partner_category"
+                    context="{'group_by':'partner_category_id'}"
+                />
+                <filter
+                    string="Categoría padre de empresa"
+                    name="group_by_invoice_partner_category_parent"
+                    context="{'group_by':'partner_category_parent_id'}"
                 />
             </filter>
         </field>

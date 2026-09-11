@@ -7,6 +7,21 @@ from odoo.tools import SQL
 class AccountInvoiceReport(models.Model):
     _inherit = "account.invoice.report"
 
+    partner_category_id = fields.Many2one(
+        comodel_name="res.partner.category",
+        string="Categoría de empresa",
+        readonly=True,
+    )
+    partner_category_parent_id = fields.Many2one(
+        comodel_name="res.partner.category",
+        string="Categoría padre de empresa",
+        readonly=True,
+    )
+    partner_shipping_id = fields.Many2one(
+        comodel_name="res.partner",
+        string="Delivery Address",
+        readonly=True,
+    )
     pharmadus_line_id = fields.Many2one(
         comodel_name="pharmadus.product.line",
         string="Línea",
@@ -40,6 +55,7 @@ class AccountInvoiceReport(models.Model):
             "invoice_date_due",
             "invoice_payment_term_id",
             "partner_bank_id",
+            "partner_shipping_id",
         ],
         "account.move.line": [
             "quantity",
@@ -67,7 +83,8 @@ class AccountInvoiceReport(models.Model):
         ],
         "uom.uom": ["category_id", "factor", "name", "uom_type"],
         "res.currency.rate": ["currency_id", "name"],
-        "res.partner": ["country_id"],
+        "res.partner": ["country_id", "category_id"],
+        "res.partner.category": ["parent_id"],
     }
 
     def _select(self) -> SQL:
@@ -75,6 +92,15 @@ class AccountInvoiceReport(models.Model):
             "%s, template.pharmadus_line_id AS pharmadus_line_id, "
             "template.pharmadus_subline_id AS pharmadus_subline_id, "
             "template.pharmadus_purchase_line_id AS pharmadus_purchase_line_id, "
-            "template.pharmadus_purchase_subline_id AS pharmadus_purchase_subline_id",
+            "template.pharmadus_purchase_subline_id AS pharmadus_purchase_subline_id, "
+            "move.partner_shipping_id AS partner_shipping_id, "
+            "(SELECT category.id FROM res_partner_res_partner_category_rel rel "
+            "JOIN res_partner_category category ON category.id = rel.category_id "
+            "WHERE rel.partner_id = move.partner_id ORDER BY category.id LIMIT 1) "
+            "AS partner_category_id, "
+            "(SELECT category.parent_id FROM res_partner_res_partner_category_rel rel "
+            "JOIN res_partner_category category ON category.id = rel.category_id "
+            "WHERE rel.partner_id = move.partner_id ORDER BY category.id LIMIT 1) "
+            "AS partner_category_parent_id",
             super()._select(),
         )

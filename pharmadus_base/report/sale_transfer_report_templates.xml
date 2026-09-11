@@ -41,6 +41,10 @@
                     <strong>Order Date</strong>
                     <div t-field="doc.date_order" t-options='{"widget": "date"}'/>
                 </div>
+                <div t-if="doc.pricelist_id" class="col" name="informations_pricelist">
+                    <strong>Pricelist</strong>
+                    <div t-field="doc.pricelist_id"/>
+                </div>
             </div>
 
             <div class="oe_structure"/>
@@ -50,14 +54,18 @@
                         <th name="th_description" class="text-start">Description</th>
                         <th name="th_quantity" class="text-end text-nowrap">Quantity</th>
                         <th name="th_uom" class="text-end text-nowrap">UoM</th>
+                        <th name="th_priceunit" class="text-end text-nowrap">Unit Price</th>
+                        <th name="th_total" class="text-end text-nowrap">Total</th>
                     </tr>
                 </thead>
                 <tbody>
+                    <t t-set="total_amount" t-value="0"/>
                     <t t-foreach="doc.order_line" t-as="line">
                         <tr t-att-class="'fw-bold o_line_section' if line.display_type == 'line_section'
                                          else 'fst-italic o_line_note' if line.display_type == 'line_note'
                                          else ''">
                             <t t-if="not line.display_type">
+                                <t t-set="total_amount" t-value="total_amount + line.price_total"/>
                                 <td name="td_name">
                                     <span t-field="line.product_id.display_name"/>
                                 </td>
@@ -78,9 +86,25 @@
                                     <span t-field="line.product_id.display_name"/>
                                 </td>
                             </t>
+                            <td name="td_priceunit" class="text-end text-nowrap">
+                                <span
+                                    t-field="line.price_unit"
+                                />
+                            </td>                            
+                            <td name="td_total" class="text-end text-nowrap">
+                                <span t-field="line.price_total"/>
+                            </td>
                         </tr>
                     </t>
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-end"><strong>Total</strong></td>
+                        <td name="td_total_amount" class="text-end">
+                            <strong t-out="total_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
 
             <div class="oe_structure"/>

@@ -10,10 +10,14 @@
     "depends": [
         "sale",
         "stock",
+        "purchase_stock",
+        "stock_landed_costs",
     ],
     "data": [
         "views/sale_order_views.xml",
         "views/stock_lot_views.xml",
+        "views/stock_move_line_views.xml",
+        "views/stock_landed_cost_views.xml",
     ],
     "installable": True,
     "application": False,

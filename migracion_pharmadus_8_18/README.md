@@ -256,3 +256,35 @@ python3 migracion_pharmadus_8_18/scripts/migrate_customer_valued_picking.py \
   --config migracion_pharmadus_8_18/config.json \
   --partner-ids 10,14,15
 ```
+
+## Canales de venta
+
+`scripts/migrate_sale_channels.py` migra los canales de `sale.channel` desde
+Odoo 8 y los asigna, cuando existe una coincidencia inequívoca por referencia,
+a pedidos, facturas y albaranes de Odoo 18.
+
+El script es idempotente: reutiliza canales con el mismo nombre, no sobrescribe
+un canal ya asignado en destino y omite coincidencias ambiguas o inexistentes.
+Sin `--write` solo muestra las operaciones previstas.
+
+Simulación limitada:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --limit 20
+```
+
+Escritura real, después de realizar un backup:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --write
+```
+
+Se pueden limitar canales o documentos concretos con `--channel-ids`,
+`--order-ids`, `--invoice-ids` y `--picking-ids`. Los pedidos se emparejan por
+`name`; las facturas usan `number` en Odoo 8 y `name` en Odoo 18; los albaranes
+se emparejan por `name`. Los registros que no cumplan una coincidencia única se
+informan y no se modifican.

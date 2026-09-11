@@ -8,7 +8,7 @@
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
             <field name="partner_shipping_id" position="attributes">
-                <attribute name="domain">[('id', 'child_of', partner_id.commercial_partner_id)]</attribute>
+                <attribute name="domain">[('id', 'child_of', partner_id)]</attribute>
             </field>
             <!-- Campo pending_confirmation disponible en la vista -->
             <field name="locked" position="after">

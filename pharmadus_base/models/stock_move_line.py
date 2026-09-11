@@ -55,11 +55,11 @@ class StockMoveLine(models.Model):
             REJECTED_LOCATION_XMLID, raise_if_not_found=False
         )
         return {
-            "entry": entry_location.id,
-            "stock": stock_location.id,
-            "receipt_quality": receipt_quality_location.id,
-            "reanalysis_quality": reanalysis_quality_location.id,
-            "rejected": rejected_location.id,
+            "entry": entry_location and entry_location.id or False,
+            "stock": stock_location and stock_location.id or False,
+            "receipt_quality": receipt_quality_location and receipt_quality_location.id or False,
+            "reanalysis_quality": reanalysis_quality_location and reanalysis_quality_location.id or False,
+            "rejected": rejected_location and rejected_location.id or False,
         }
 
     @api.depends(

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl) -->
+<odoo>
+    <record id="view_stock_landed_cost_form_custom" model="ir.ui.view">
+        <field name="name">stock.landed.cost.form.custom</field>
+        <field name="model">stock.landed.cost</field>
+        <field name="inherit_id" ref="stock_landed_costs.view_stock_landed_cost_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='valuation_adjustments']//list/field[@name='former_cost']" position="before">
+                <field name="unit_former_cost" readonly="1"/>
+            </xpath>
+            <xpath expr="//page[@name='valuation_adjustments']//list/field[@name='final_cost']" position="after">
+                <field name="unit_final_cost" readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

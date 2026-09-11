@@ -3,6 +3,13 @@
 from odoo import fields, models, api, _
 from odoo.tools import float_compare
 
+SALE_ORDER_STATE = [
+    ('draft', "Quotation"),
+    ('sent', "Quotation Sent"),
+    ('sale', "Sales Order"),
+    ('cancel', "Cancelled"),
+]
+
 
 class SaleTransfer(models.Model):
     _name = "sale.transfer"
@@ -44,7 +51,28 @@ class SaleTransfer(models.Model):
         inverse_name='order_id',
         string="Líneas de pedido",
         copy=True, auto_join=True)      
-
+    pricelist_id = fields.Many2one(
+        comodel_name='product.pricelist',
+        string="Tarifa",
+        compute='_compute_pricelist_id',
+        store=True, readonly=False, precompute=True, check_company=True,  # Unrequired company
+        tracking=1,
+        domain="['|', ('company_id', '=', False), ('company_id', '=', company_id)]",
+        help="If you change the pricelist, only newly added lines will be affected.")
+    state = fields.Selection(
+        selection=SALE_ORDER_STATE,
+        string="Status",
+        readonly=True, copy=False, index=True,
+        tracking=3,
+        group_expand=True,
+        default='draft')
+    currency_id = fields.Many2one(
+        comodel_name='res.currency',
+        compute='_compute_currency_id',
+        store=True,
+        precompute=True,
+        ondelete='restrict'
+    )
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -128,6 +156,24 @@ class SaleTransfer(models.Model):
             raise_if_not_found=False
         )
 
+    @api.depends('partner_id', 'company_id')
+    def _compute_pricelist_id(self):
+        for order in self:
+            if order.state != 'draft':
+                continue
+            if not order.partner_id:
+                order.pricelist_id = False
+                continue
+            order = order.with_company(order.company_id)
+            order.pricelist_id = order.partner_id.property_product_pricelist
+
+    @api.depends('pricelist_id', 'company_id')
+    def _compute_currency_id(self):
+        for order in self:
+            order.currency_id = order.pricelist_id.currency_id or order.company_id.currency_id
+
+
+
 class SaleTransferLine(models.Model):
     _name = 'sale.transfer.line'
     _description = "Sale Transfer Line"
@@ -183,8 +229,62 @@ class SaleTransferLine(models.Model):
     product_packaging_qty = fields.Float(
         string="Packaging Quantity",
         default=1.0,
-    )
+    )        
+    price_unit = fields.Float(
+        string="Unit Price",
+        compute='_compute_price_unit',
+        min_display_digits='Product Price',
+        store=True, readonly=False, required=True, precompute=True)
+    currency_id = fields.Many2one(
+        related='order_id.currency_id',
+        depends=['order_id.currency_id'],
+        store=True, precompute=True)
+    technical_price_unit = fields.Float()
+    is_expense = fields.Boolean(
+        string="Is expense",
+        help="Is true if the sales order line comes from an expense or a vendor bills")
+    pricelist_item_id = fields.Many2one(
+        comodel_name='product.pricelist.item',
+        compute='_compute_pricelist_item_id')
+    product_no_variant_attribute_value_ids = fields.Many2many(
+        comodel_name='product.template.attribute.value',
+        string="Extra Values",
+        compute='_compute_no_variant_attribute_values',
+        store=True, readonly=False, precompute=True, ondelete='restrict')
+    price_total = fields.Monetary(
+        string="Total",
+        compute='_compute_amount',
+        store=True, precompute=True)
 
+    @api.depends('product_id', 'product_uom', 'product_uom_qty')
+    def _compute_price_unit(self):
+        def has_manual_price(line):            
+            # `line.currency_id` can be False for NewId records
+            currency = (
+                line.currency_id
+                or line.company_id.currency_id
+                or line.env.company.currency_id
+            )
+            return currency.compare_amounts(line.technical_price_unit, line.price_unit)
+
+        force_recompute = self.env.context.get('force_price_recomputation')
+        for line in self:
+            # Don't compute the price for deleted lines.
+            if not line.order_id:
+                continue
+            # check if the price has been manually set or there is already invoiced amount.
+            # if so, the price shouldn't change as it might have been manually edited.
+            if (
+                (not force_recompute and has_manual_price(line))
+                or (line.product_id.expense_policy == 'cost' and line.is_expense)
+            ):
+                continue
+            line = line.with_context(sale_write_from_compute=True)
+            if not line.product_uom or not line.product_id:
+                line.price_unit = 0.0
+                line.technical_price_unit = 0.0
+            else:
+                line._reset_price_unit()
 
     @api.depends('product_id')
     def _compute_product_template_id(self):
@@ -194,7 +294,7 @@ class SaleTransferLine(models.Model):
     def _search_product_template_id(self, operator, value):
         return [('product_id.product_tmpl_id', operator, value)]
 
-    @api.depends('product_id', 'product_packaging_id', 'product_packaging_qty', 'product_uom')
+    @api.depends('product_id', 'product_packaging_id', 'product_uom')
     def _compute_product_uom_qty(self):
         for line in self:
             if line.display_type:
@@ -228,3 +328,104 @@ class SaleTransferLine(models.Model):
                         .filtered(lambda p: p.sales and (p.product_id.company_id <= p.company_id <= line.company_id))\
                         ._find_suitable_product_packaging(line.product_uom_qty, line.product_uom)
                 line.product_packaging_id = suggested_packaging or line.product_packaging_id
+
+    def _reset_price_unit(self):
+        self.ensure_one()
+
+        line = self.with_company(self.company_id)
+        price = line._get_display_price_ignore_combo()
+        product_taxes = line.product_id.taxes_id._filter_taxes_by_company(line.company_id)
+        price_unit = line.product_id._get_tax_included_unit_price_from_price(
+            price,
+            product_taxes=product_taxes,
+        )
+        line.update({
+            'price_unit': price_unit,
+            'technical_price_unit': price_unit,
+        })
+
+    def _get_display_price_ignore_combo(self):
+        """ This helper method allows to compute the display price of a SOL, while ignoring combo
+        logic.
+
+        I.e. this method returns the display price of a SOL as if it were neither a combo line nor a
+        combo item line.
+        """
+        self.ensure_one()
+        pricelist_price = self._get_pricelist_price()
+
+        if not self.pricelist_item_id._show_discount():
+            # No pricelist rule found => no discount from pricelist
+            return pricelist_price
+
+        base_price = self._get_pricelist_price_before_discount()
+
+        # negative discounts (= surcharge) are included in the display price
+        return max(base_price, pricelist_price)
+
+    def _get_pricelist_price(self):
+        """Compute the price given by the pricelist for the given line information.
+
+        :return: the product sales price in the order currency (without taxes)
+        :rtype: float
+        """
+        self.ensure_one()
+        self.product_id.ensure_one()
+
+        price = self.pricelist_item_id._compute_price(
+            product=self.product_id.with_context(**self._get_product_price_context()),
+            quantity=self.product_uom_qty or 1.0,
+            uom=self.product_uom,
+            date=self._get_order_date(),
+            currency=self.currency_id,
+        )
+
+        return price
+
+    @api.depends('product_id', 'product_uom', 'product_uom_qty')
+    def _compute_pricelist_item_id(self):
+        for line in self:
+            if not line.product_id or line.display_type or not line.order_id.pricelist_id:
+                line.pricelist_item_id = False
+            else:
+                line.pricelist_item_id = line.order_id.pricelist_id._get_product_rule(
+                    line.product_id,
+                    quantity=line.product_uom_qty or 1.0,
+                    uom=line.product_uom,
+                    date=line._get_order_date(),
+                )
+
+    def _get_order_date(self):
+        self.ensure_one()
+        return self.order_id.date_order
+
+    def _get_product_price_context(self):
+        """Gives the context for product price computation.
+
+        :return: additional context to consider extra prices from attributes in the base product price.
+        :rtype: dict
+        """
+        self.ensure_one()
+        return self.product_id._get_product_price_context(
+            self.product_no_variant_attribute_value_ids,
+        )
+
+    @api.depends('product_id')
+    def _compute_no_variant_attribute_values(self):
+        for line in self:
+            if not line.product_id:
+                line.product_no_variant_attribute_value_ids = False
+                continue
+            if not line.product_no_variant_attribute_value_ids:
+                continue
+            valid_values = line.product_id.product_tmpl_id.valid_product_template_attribute_line_ids.product_template_value_ids
+            # remove the no_variant attributes that don't belong to this template
+            for ptav in line.product_no_variant_attribute_value_ids:
+                if ptav._origin not in valid_values:
+                    line.product_no_variant_attribute_value_ids -= ptav
+
+    @api.depends('product_uom_qty', 'price_unit')
+    def _compute_amount(self):
+        for line in self:
+            line.price_total = line.price_unit * line.product_uom_qty
+
