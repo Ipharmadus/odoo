@@ -18,6 +18,7 @@ Master index for all Odoo 18 development guides. Read the appropriate guide from
 
 | Topic | File | When to Use |
 |-------|------|-------------|
+| API Highlights | `references/api-highlights.md` | Version-distinguishing Odoo 18 rules (`<list>`, direct-expression attrs, `aggregator=`, `@api.ondelete`) |
 | Actions | `references/odoo-18-actions-guide.md` | Creating actions, menus, scheduled jobs, server actions |
 | API Decorators | `references/odoo-18-decorator-guide.md` | Using @api decorators, compute fields, validation |
 | Controllers | `references/odoo-18-controller-guide.md` | Writing HTTP endpoints, routes, web controllers |
@@ -40,9 +41,12 @@ Master index for all Odoo 18 development guides. Read the appropriate guide from
 ## File Structure
 
 ```
-skills/odoo-18.0/
+.skills/odoo-18.0/
 ├── SKILL.md                          # This file - master index
-└── references/                       # Development guides
+├── AGENTS.md                         # AI-IDE setup notes (upstream)
+├── CLAUDE.md                         # Agent summary + anti-patterns
+└── references/                       # Development guides (19 files)
+    ├── api-highlights.md
     ├── odoo-18-actions-guide.md
     ├── odoo-18-controller-guide.md
     ├── odoo-18-data-guide.md
@@ -62,6 +66,10 @@ skills/odoo-18.0/
     ├── odoo-18-translation-guide.md
     └── odoo-18-view-guide.md
 ```
+
+`api-highlights.md` carries its own skill frontmatter (`name:
+odoo-18-api-highlights`) and works as a standalone mini-skill: read it when the
+target version is 18.0 and version-specific rules matter.
 
 ## Base Code Reference (Odoo 18)
 

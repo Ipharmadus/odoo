@@ -16,12 +16,14 @@ the repository files over this document if they disagree.
 ## Root Paths
 
 ```text
-/opt/pharmadus/                           Docker Compose/Doodba project root
-/opt/pharmadus/odoo/custom/src/private/   Private addon workspace/current repo
+/opt/pharmadus/                            Docker Compose/Doodba project root
+/opt/pharmadus/odoo/custom/src/pharmadus/  Pharmadus repo (origin Ipharmadus/odoo, branch 18.0)
+/opt/pharmadus/odoo/custom/src/private/    Extra local addons (bookmark, sale_custom, sale_messages)
+/opt/pharmadus/odoo/custom/src/odoo/       OCB 18.0 core source (do not edit)
 ```
 
 Run Docker Compose commands from `/opt/pharmadus` and code/git commands from
-`/opt/pharmadus/odoo/custom/src/private` unless a task requires another path.
+`/opt/pharmadus/odoo/custom/src/pharmadus` unless a task requires another path.
 
 ## Key Files
 
@@ -117,7 +119,7 @@ DEBUGPY_ENABLE=${DOODBA_DEBUGPY_ENABLE:-0}
 WITHOUT_DEMO=${DOODBA_WITHOUT_DEMO-false}
 ```
 
-`/opt/pharmadus/odoo/custom/conf.d/80-workers.conf` sets `workers = 8`, but the
+`/opt/pharmadus/odoo/custom/conf.d/80-workers.conf` sets `workers = 3`, but the
 development command in `devel.yaml` overrides runtime workers to `0`.
 
 ## Common Commands
@@ -144,7 +146,7 @@ Keep plain `exec` for interactive `psql` sessions.
 
 ## Addon Layout
 
-Private custom addons currently present:
+Custom addons in `/opt/pharmadus/odoo/custom/src/pharmadus` (the git repo):
 
 ```text
 pharmadus_base
@@ -153,8 +155,21 @@ pharmadus_stock_supplier_lot
 pharmadus_custom
 ```
 
-Only the `pharmadus_base` and `migracion_pharmadus_8_18` modules can be modified.
-All other modules belong to external collaborators and must not be touched.
+Extra addons in `/opt/pharmadus/odoo/custom/src/private` (outside the Pharmadus
+git repo, but present and installed in the development database):
+
+```text
+bookmark
+sale_custom
+sale_messages
+```
+
+`migracion_pharmadus_8_18` is a migration project directory, not an installable
+addon: it has no `__manifest__.py`. Do not treat it as a module.
+
+Before modifying a module, confirm ownership with the team; several addons in
+this environment come from external collaborators, and OCA addons plus the OCB
+core source under `odoo/` must not be edited here.
 
 There may be additional work-in-progress addons in the working tree. Check
 `git status --short` and avoid overwriting unrelated changes.
@@ -163,7 +178,8 @@ Manifest summaries from the local files:
 
 ```text
 pharmadus_base 18.0.1.0.0
-Depends: base, mail, sale, purchase, purchase_requisition, stock, account,
+Depends: base, mail, sales_team, sale, purchase, purchase_requisition, stock,
+mrp, stock_lot_state, product_expiry, quality_control_oca, account,
 stock_account.
 
 stock_lot_state 18.0.1.0.0
@@ -217,16 +233,17 @@ the active Odoo process in the service container.
 
 ## Repositories And Addons
 
-`repos.yaml`:
+`repos.yaml` (each key is a directory under `odoo/custom/src/`):
 
 ```text
-./odoo    OCA/OCB 18.0
-./private Ipharmadus/odoo 18.0
+./odoo      OCA/OCB, target `ocb $ODOO_VERSION` (remotes: ocb, odoo)
+pharmadus   Ipharmadus/odoo, target `$ODOO_VERSION` (remote: origin)
 ```
 
 `addons.yaml` enables all addons (`*`) from many OCA repositories plus
-`private`. Do not assume all possible addons are installed in the database;
-this only controls addon availability.
+`pharmadus` and `spreadsheet`. Do not assume all possible addons are installed
+in the database; this only controls addon availability. `private/` is not listed
+in `repos.yaml`, so it is not managed by Doodba aggregation.
 
 Use `setup-devel.yaml` only for Doodba aggregation:
 
@@ -241,7 +258,7 @@ The file comments mention exporting UID/GID/UMASK variables before aggregation.
 Migration directory:
 
 ```text
-/opt/pharmadus/odoo/custom/src/private/migracion_pharmadus_8_18/
+/opt/pharmadus/odoo/custom/src/pharmadus/migracion_pharmadus_8_18/
 ```
 
 Known files:
@@ -250,9 +267,13 @@ Known files:
 README.md
 config.example.json
 config.json
-scripts/migrate_product_specifications.py
-scripts/migrate_product_extra_categories.py
+scripts/__init__.py
 scripts/odoo_xmlrpc.py
+scripts/migrate_customer_valued_picking.py
+scripts/migrate_product_expiry.py
+scripts/migrate_product_extra_categories.py
+scripts/migrate_product_specifications.py
+scripts/migrate_user_signatures.py
 ```
 
 `config.json` contains source/target XML-RPC connection details and may contain
@@ -294,8 +315,8 @@ suite unless explicitly needed.
 - Do not overwrite worktree changes made by the user or other agents.
 - Do not commit, push, or amend unless explicitly requested.
 - Use `/opt/pharmadus` as the working directory for Docker Compose commands.
-- Use `/opt/pharmadus/odoo/custom/src/private` as the working directory for
-  private addon source edits.
+- Use `/opt/pharmadus/odoo/custom/src/pharmadus` as the working directory for
+  addon source edits and git commands.
 
 ## Known Corrections Versus Older Notes
 
@@ -310,5 +331,13 @@ suite unless explicitly needed.
 - Migration configuration uses XML-RPC source/target credentials; do not replace
   it with unrelated dry-run JSON unless intentionally changing the migration
   scripts.
+- The current Pharmadus repo is `/opt/pharmadus/odoo/custom/src/pharmadus`, not
+  `.../custom/src/private`. `private/` holds unrelated addons (`bookmark`,
+  `sale_custom`, `sale_messages`).
+- The migration project lives inside the Pharmadus repo
+  (`.../pharmadus/migracion_pharmadus_8_18/`) and ships five migration scripts
+  besides `odoo_xmlrpc.py`.
+- `conf.d/80-workers.conf` sets `workers = 3` (older notes said 8); the devel
+  command still overrides it with `--workers=0`.
 
-Last reviewed against local files: 2026-06-23.
+Last reviewed against local files: 2026-09-11.

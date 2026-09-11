@@ -6,12 +6,13 @@ This file provides guidance to AI agents when working with Odoo 18 code in this 
 
 ## Documentation Structure
 
-The `skills/odoo-18.0/references/` directory contains modular guides for Odoo 18 development:
+The `.skills/odoo-18.0/references/` directory contains modular guides for Odoo 18 development:
 
 ```
-skills/odoo-18.0/
+.skills/odoo-18.0/
 ├── SKILL.md                       # Master index
-├── references/                    # Development guides (18 files)
+├── references/                    # Development guides (19 files)
+│   ├── api-highlights.md           # Version-specific 18.0 API rules
 │   ├── odoo-18-actions-guide.md     # ir.actions.*, cron, bindings
 │   ├── odoo-18-controller-guide.md  # HTTP, routing, controllers
 │   ├── odoo-18-data-guide.md        # XML/CSV data files, records
@@ -38,6 +39,7 @@ skills/odoo-18.0/
 
 | Task | Guide |
 |------|-------|
+| Applying 18.0-specific API rules | `references/api-highlights.md` |
 | Creating actions, menus, cron jobs | `references/odoo-18-actions-guide.md` |
 | Creating a new module | `references/odoo-18-development-guide.md` |
 | Configuring __manifest__.py | `references/odoo-18-manifest-guide.md` |

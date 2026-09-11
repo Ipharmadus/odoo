@@ -27,9 +27,10 @@ Configure once in Cursor settings:
 ## Documentation Structure
 
 ```
-skills/odoo-18.0/
+.skills/odoo-18.0/
 ├── SKILL.md                       # Master index (all agents)
-├── references/                    # Development guides (18 files)
+├── references/                    # Development guides (19 files)
+│   ├── api-highlights.md            # Version-specific 18.0 API rules
 │   ├── odoo-18-actions-guide.md     # ir.actions.*, cron, bindings
 │   ├── odoo-18-controller-guide.md  # HTTP, routing, controllers
 │   ├── odoo-18-data-guide.md        # XML/CSV data files, records
@@ -59,6 +60,7 @@ skills/odoo-18.0/
 | File | Purpose | When to Use |
 |------|---------|-------------|
 | `SKILL.md` | Master index for all guides | Find the right guide for your task |
+| `references/api-highlights.md` | Version-distinguishing Odoo 18 API patterns | Applying 18.0-specific rules (`<list>`, direct attrs, `aggregator=`) |
 | `references/odoo-18-actions-guide.md` | Actions (window, URL, server, cron) | Creating actions, menus, scheduled jobs |
 | `references/odoo-18-controller-guide.md` | HTTP controllers, routing | Writing endpoints |
 | `references/odoo-18-data-guide.md` | XML/CSV data files, records | Creating data files |
@@ -96,6 +98,7 @@ skills/odoo-18.0/
 | File | globs Pattern |
 |------|---------------|
 | `SKILL.md` | `**/*.{py,xml}` |
+| `references/api-highlights.md` | `**/*.{py,xml}` |
 | `references/odoo-18-actions-guide.md` | `**/*.{py,xml}` |
 | `references/odoo-18-controller-guide.md` | `**/controllers/**/*.py` |
 | `references/odoo-18-data-guide.md` | `**/*.{xml,csv}` |

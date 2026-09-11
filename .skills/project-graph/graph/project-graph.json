@@ -1,0 +1,1523 @@
+{
+  "generated_at": "2026-09-11T10:29:27+00:00",
+  "repo_root": "/opt/pharmadus/odoo/custom/src/pharmadus",
+  "addons": {
+    "pharmadus_base": {
+      "path": "pharmadus_base",
+      "manifest": {
+        "name": "Pharmadus Base",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "base",
+          "mail",
+          "sales_team",
+          "sale",
+          "purchase",
+          "purchase_requisition",
+          "stock",
+          "mrp",
+          "stock_lot_state",
+          "product_expiry",
+          "quality_control_oca",
+          "account",
+          "stock_account"
+        ],
+        "data": [
+          "security/ir.model.access.csv",
+          "security/ir_rule.xml",
+          "views/pharmadus_product_specification_views.xml",
+          "views/res_users_views.xml",
+          "views/product_template_views.xml",
+          "views/purchase_requisition_views.xml",
+          "views/stock_route_views.xml",
+          "views/stock_lot_views.xml",
+          "views/report_views.xml",
+          "views/sale_transfer_views.xml",
+          "report/purchase_order_templates.xml",
+          "report/stock_lot_label_templates.xml",
+          "views/stock_picking_views.xml",
+          "data/pharmadus.product.line.csv",
+          "data/pharmadus.product.subline.csv",
+          "data/pharmadus.product.purchase.line.csv",
+          "data/pharmadus.product.purchase.subline.csv",
+          "data/pharmadus.product.packaging.type.csv",
+          "data/pharmadus.product.base.form.csv",
+          "data/pharmadus.product.grouping.csv",
+          "data/catalog_seed_noupdate.xml",
+          "data/pharmadus_product_specification_data.xml",
+          "report/sale_transfer_report_templates.xml",
+          "data/mail_template_sale_transfer.xml",
+          "views/stock_lot_wizard_views.xml"
+        ],
+        "assets": {
+          "web.assets_backend": [
+            "pharmadus_base/static/src/stock_forecasted/forecasted_details.xml"
+          ]
+        },
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": ""
+      },
+      "models": [
+        {
+          "class": "IrModelData",
+          "file": "pharmadus_base/models/ir_model_data.py",
+          "line": 6,
+          "name": null,
+          "inherit": "ir.model.data",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusCatalogMixin",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 7,
+          "name": "pharmadus.catalog.mixin",
+          "inherit": null,
+          "inherits": null,
+          "description": "Pharmadus Catalog Mixin",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "res.company"
+          ]
+        },
+        {
+          "class": "PharmadusProductLine",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 21,
+          "name": "pharmadus.product.line",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Product Line",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusProductSubline",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 35,
+          "name": "pharmadus.product.subline",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Product Subline",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.line"
+          ]
+        },
+        {
+          "class": "PharmadusProductPackaging",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 69,
+          "name": "pharmadus.product.packaging.type",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Product Packaging Type",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusProductBaseForm",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 83,
+          "name": "pharmadus.product.base.form",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Product Base Form",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusProductGarment",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 97,
+          "name": "pharmadus.product.garment",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Product Garment",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusProductPurchaseLine",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 111,
+          "name": "pharmadus.product.purchase.line",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Purchase Product Line",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusProductPurchaseSubline",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 125,
+          "name": "pharmadus.product.purchase.subline",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Purchase Product Subline",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.purchase.line"
+          ]
+        },
+        {
+          "class": "PharmadusProductGrouping",
+          "file": "pharmadus_base/models/pharmadus_product_specification.py",
+          "line": 159,
+          "name": "pharmadus.product.grouping",
+          "inherit": "pharmadus.catalog.mixin",
+          "inherits": null,
+          "description": "Product Grouping",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ProductTemplate",
+          "file": "pharmadus_base/models/product_template.py",
+          "line": 7,
+          "name": null,
+          "inherit": "product.template",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.base.form",
+            "pharmadus.product.garment",
+            "pharmadus.product.grouping",
+            "pharmadus.product.line",
+            "pharmadus.product.packaging.type",
+            "pharmadus.product.purchase.line",
+            "pharmadus.product.purchase.subline",
+            "pharmadus.product.subline"
+          ]
+        },
+        {
+          "class": "PurchaseRequisition",
+          "file": "pharmadus_base/models/purchase_requisition.py",
+          "line": 6,
+          "name": null,
+          "inherit": "purchase.requisition",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ResPartner",
+          "file": "pharmadus_base/models/res_partner.py",
+          "line": 6,
+          "name": null,
+          "inherit": "res.partner",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ResUsers",
+          "file": "pharmadus_base/models/res_users.py",
+          "line": 6,
+          "name": null,
+          "inherit": "res.users",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "SaleTransfer",
+          "file": "pharmadus_base/models/sale_transfer.py",
+          "line": 7,
+          "name": "sale.transfer",
+          "inherit": null,
+          "inherits": null,
+          "description": "Sale Transfer",
+          "transient": null,
+          "field_types": [
+            "Many2one",
+            "One2many"
+          ],
+          "comodels": [
+            "res.company",
+            "res.partner",
+            "sale.transfer.line"
+          ]
+        },
+        {
+          "class": "SaleTransferLine",
+          "file": "pharmadus_base/models/sale_transfer.py",
+          "line": 131,
+          "name": "sale.transfer.line",
+          "inherit": null,
+          "inherits": null,
+          "description": "Sale Transfer Line",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "product.packaging",
+            "product.product",
+            "product.template",
+            "sale.transfer",
+            "uom.uom"
+          ]
+        },
+        {
+          "class": "StockForecasted",
+          "file": "pharmadus_base/models/stock_forecasted.py",
+          "line": 6,
+          "name": null,
+          "inherit": "stock.forecasted_product_product",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockLot",
+          "file": "pharmadus_base/models/stock_lot.py",
+          "line": 15,
+          "name": null,
+          "inherit": "stock.lot",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.packaging.type"
+          ]
+        },
+        {
+          "class": "StockLotCreationWizard",
+          "file": "pharmadus_base/models/stock_lot_wizard.py",
+          "line": 6,
+          "name": "stock.lot.creation.wizard",
+          "inherit": null,
+          "inherits": null,
+          "description": "Stock Lot Creation Wizard",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.packaging.type",
+            "product.product",
+            "stock.move",
+            "stock.picking"
+          ]
+        },
+        {
+          "class": "StockMoveLine",
+          "file": "pharmadus_base/models/stock_move_line.py",
+          "line": 13,
+          "name": null,
+          "inherit": "stock.move.line",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.packaging.type"
+          ]
+        },
+        {
+          "class": "StockRoute",
+          "file": "pharmadus_base/models/stock_route.py",
+          "line": 6,
+          "name": null,
+          "inherit": "stock.route",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockValuationLayer",
+          "file": "pharmadus_base/models/stock_valuation_layer.py",
+          "line": 6,
+          "name": null,
+          "inherit": "stock.valuation.layer",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": []
+        },
+        {
+          "class": "AccountInvoiceReport",
+          "file": "pharmadus_base/report/account_invoice_report.py",
+          "line": 7,
+          "name": null,
+          "inherit": "account.invoice.report",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.line",
+            "pharmadus.product.purchase.line",
+            "pharmadus.product.purchase.subline",
+            "pharmadus.product.subline"
+          ]
+        },
+        {
+          "class": "PurchaseReport",
+          "file": "pharmadus_base/report/purchase_report.py",
+          "line": 7,
+          "name": null,
+          "inherit": "purchase.report",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.purchase.line",
+            "pharmadus.product.purchase.subline"
+          ]
+        },
+        {
+          "class": "SaleReport",
+          "file": "pharmadus_base/report/sale_report.py",
+          "line": 6,
+          "name": null,
+          "inherit": "sale.report",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "pharmadus.product.line",
+            "pharmadus.product.subline"
+          ]
+        }
+      ],
+      "xml": [
+        {
+          "file": "pharmadus_base/data/catalog_seed_noupdate.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/data/mail_template_sale_transfer.xml",
+          "records": [
+            {
+              "id": "sequence_sale_transfer",
+              "model": "ir.sequence"
+            },
+            {
+              "id": "action_report_saletransfer",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "mail_template_sale_transfer_confirmation",
+              "model": "mail.template"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus_product_specification_data.xml",
+          "records": [
+            {
+              "id": "pharmadus_product_garment_vestida",
+              "model": "pharmadus.product.garment"
+            },
+            {
+              "id": "pharmadus_product_garment_desnuda",
+              "model": "pharmadus.product.garment"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/report/purchase_order_templates.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_purchaseorder_document_pharmadus_requisition"
+          ]
+        },
+        {
+          "file": "pharmadus_base/report/sale_transfer_report_templates.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_saletransfer_document",
+            "report_saletransfer"
+          ]
+        },
+        {
+          "file": "pharmadus_base/report/stock_lot_label_templates.xml",
+          "records": [
+            {
+              "id": "paperformat_lot_labels_pharmadus",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "paperformat_lot_reception_labels_pharmadus",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "paperformat_lot_state_labels_pharmadus",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_lot_labels",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_lot_sampling_reception_label",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_lot_sampled_package_label",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_lot_approved_label",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_lot_rejected_label",
+              "model": "ir.actions.report"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_lot_labels",
+            "report_lot_sampling_label",
+            "report_lot_sampling_reception_label",
+            "report_lot_sampled_package_label",
+            "report_lot_approved_label",
+            "report_lot_rejected_label",
+            "report_lot_state_label"
+          ]
+        },
+        {
+          "file": "pharmadus_base/security/ir_rule.xml",
+          "records": [
+            {
+              "id": "rule_sale_transfer_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_sale_transfer_line_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_line_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_subline_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_packaging_type_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_base_form_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_garment_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_purchase_line_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_purchase_subline_company",
+              "model": "ir.rule"
+            },
+            {
+              "id": "rule_pharmadus_product_grouping_company",
+              "model": "ir.rule"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/static/src/stock_forecasted/forecasted_details.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/pharmadus_product_specification_views.xml",
+          "records": [
+            {
+              "id": "view_pharmadus_product_line_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_line_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_line",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_subline_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_subline_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_subline",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_packaging_type_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_packaging_type_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_packaging_type",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_base_form_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_base_form_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_base_form",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_garment_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_garment_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_garment",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_purchase_line_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_purchase_line_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_purchase_line",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_purchase_subline_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_purchase_subline_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_purchase_subline",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_pharmadus_product_grouping_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_product_grouping_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_product_grouping",
+              "model": "ir.actions.act_window"
+            }
+          ],
+          "menus": [
+            {
+              "id": "menu_pharmadus_product_specs_sale",
+              "name": "Especificaciones",
+              "parent": "sale.prod_config_main",
+              "action": "",
+              "groups": "",
+              "sequence": "90"
+            },
+            {
+              "id": "menu_pharmadus_product_line_sale",
+              "name": "Líneas",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_line",
+              "groups": "",
+              "sequence": "10"
+            },
+            {
+              "id": "menu_pharmadus_product_subline_sale",
+              "name": "SubLíneas",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_subline",
+              "groups": "",
+              "sequence": "20"
+            },
+            {
+              "id": "menu_pharmadus_product_packaging_type_sale",
+              "name": "Envasados",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_packaging_type",
+              "groups": "",
+              "sequence": "30"
+            },
+            {
+              "id": "menu_pharmadus_product_base_form_sale",
+              "name": "Formas base",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_base_form",
+              "groups": "",
+              "sequence": "40"
+            },
+            {
+              "id": "menu_pharmadus_product_garment_sale",
+              "name": "Vestimentas",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_garment",
+              "groups": "",
+              "sequence": "50"
+            },
+            {
+              "id": "menu_pharmadus_product_purchase_line_sale",
+              "name": "Líneas compras",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_purchase_line",
+              "groups": "",
+              "sequence": "60"
+            },
+            {
+              "id": "menu_pharmadus_product_purchase_subline_sale",
+              "name": "Sublíneas compras",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_purchase_subline",
+              "groups": "",
+              "sequence": "70"
+            },
+            {
+              "id": "menu_pharmadus_product_grouping_sale",
+              "name": "Agrupaciones",
+              "parent": "menu_pharmadus_product_specs_sale",
+              "action": "action_pharmadus_product_grouping",
+              "groups": "",
+              "sequence": "80"
+            },
+            {
+              "id": "menu_pharmadus_product_specs_purchase",
+              "name": "Especificaciones",
+              "parent": "purchase.menu_product_in_config_purchase",
+              "action": "",
+              "groups": "",
+              "sequence": "90"
+            },
+            {
+              "id": "menu_pharmadus_product_line_purchase",
+              "name": "Líneas",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_line",
+              "groups": "",
+              "sequence": "10"
+            },
+            {
+              "id": "menu_pharmadus_product_subline_purchase",
+              "name": "SubLíneas",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_subline",
+              "groups": "",
+              "sequence": "20"
+            },
+            {
+              "id": "menu_pharmadus_product_packaging_type_purchase",
+              "name": "Envasados",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_packaging_type",
+              "groups": "",
+              "sequence": "30"
+            },
+            {
+              "id": "menu_pharmadus_product_base_form_purchase",
+              "name": "Formas base",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_base_form",
+              "groups": "",
+              "sequence": "40"
+            },
+            {
+              "id": "menu_pharmadus_product_garment_purchase",
+              "name": "Vestimentas",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_garment",
+              "groups": "",
+              "sequence": "50"
+            },
+            {
+              "id": "menu_pharmadus_product_purchase_line_purchase",
+              "name": "Líneas compras",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_purchase_line",
+              "groups": "",
+              "sequence": "60"
+            },
+            {
+              "id": "menu_pharmadus_product_purchase_subline_purchase",
+              "name": "Sublíneas compras",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_purchase_subline",
+              "groups": "",
+              "sequence": "70"
+            },
+            {
+              "id": "menu_pharmadus_product_grouping_purchase",
+              "name": "Agrupaciones",
+              "parent": "menu_pharmadus_product_specs_purchase",
+              "action": "action_pharmadus_product_grouping",
+              "groups": "",
+              "sequence": "80"
+            },
+            {
+              "id": "menu_pharmadus_product_specs_stock",
+              "name": "Especificaciones",
+              "parent": "stock.menu_product_in_config_stock",
+              "action": "",
+              "groups": "",
+              "sequence": "90"
+            },
+            {
+              "id": "menu_pharmadus_product_line_stock",
+              "name": "Líneas",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_line",
+              "groups": "",
+              "sequence": "10"
+            },
+            {
+              "id": "menu_pharmadus_product_subline_stock",
+              "name": "SubLíneas",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_subline",
+              "groups": "",
+              "sequence": "20"
+            },
+            {
+              "id": "menu_pharmadus_product_packaging_type_stock",
+              "name": "Envasados",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_packaging_type",
+              "groups": "",
+              "sequence": "30"
+            },
+            {
+              "id": "menu_pharmadus_product_base_form_stock",
+              "name": "Formas base",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_base_form",
+              "groups": "",
+              "sequence": "40"
+            },
+            {
+              "id": "menu_pharmadus_product_garment_stock",
+              "name": "Vestimentas",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_garment",
+              "groups": "",
+              "sequence": "50"
+            },
+            {
+              "id": "menu_pharmadus_product_purchase_line_stock",
+              "name": "Líneas compras",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_purchase_line",
+              "groups": "",
+              "sequence": "60"
+            },
+            {
+              "id": "menu_pharmadus_product_purchase_subline_stock",
+              "name": "Sublíneas compras",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_purchase_subline",
+              "groups": "",
+              "sequence": "70"
+            },
+            {
+              "id": "menu_pharmadus_product_grouping_stock",
+              "name": "Agrupaciones",
+              "parent": "menu_pharmadus_product_specs_stock",
+              "action": "action_pharmadus_product_grouping",
+              "groups": "",
+              "sequence": "80"
+            }
+          ],
+          "actions": [
+            {
+              "id": "action_pharmadus_product_line",
+              "model": "ir.actions.act_window",
+              "name": "Líneas",
+              "res_model": "pharmadus.product.line",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_subline",
+              "model": "ir.actions.act_window",
+              "name": "SubLíneas",
+              "res_model": "pharmadus.product.subline",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_packaging_type",
+              "model": "ir.actions.act_window",
+              "name": "Envasados",
+              "res_model": "pharmadus.product.packaging.type",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_base_form",
+              "model": "ir.actions.act_window",
+              "name": "Formas base",
+              "res_model": "pharmadus.product.base.form",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_garment",
+              "model": "ir.actions.act_window",
+              "name": "Vestimentas",
+              "res_model": "pharmadus.product.garment",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_purchase_line",
+              "model": "ir.actions.act_window",
+              "name": "Líneas compras",
+              "res_model": "pharmadus.product.purchase.line",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_purchase_subline",
+              "model": "ir.actions.act_window",
+              "name": "Sublíneas compras",
+              "res_model": "pharmadus.product.purchase.subline",
+              "view_mode": "list,form"
+            },
+            {
+              "id": "action_pharmadus_product_grouping",
+              "model": "ir.actions.act_window",
+              "name": "Agrupaciones",
+              "res_model": "pharmadus.product.grouping",
+              "view_mode": "list,form"
+            }
+          ],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/product_template_views.xml",
+          "records": [
+            {
+              "id": "view_product_template_form_pharmadus_specifications",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_product_template_form_pharmadus_tags_hide_sales",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_product_template_form_pharmadus_tags_below_barcode",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/purchase_requisition_views.xml",
+          "records": [
+            {
+              "id": "view_purchase_requisition_form_pharmadus_name_editable",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/report_views.xml",
+          "records": [
+            {
+              "id": "sale_report_view_tree_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_order_product_pivot_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_order_product_search_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "purchase_report_view_tree_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_purchase_order_pivot_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_purchase_order_search_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "account_invoice_report_view_tree_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_account_invoice_report_pivot_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_account_invoice_report_search_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "account.action_account_invoice_report_all",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "account.action_account_invoice_report_all_supp",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_inventory_valuation_search_pharmadus",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [
+            {
+              "id": "account.action_account_invoice_report_all",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "account.action_account_invoice_report_all_supp",
+              "model": "ir.actions.act_window"
+            }
+          ],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/res_users_views.xml",
+          "records": [
+            {
+              "id": "view_users_form_pharmadus_signature",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/sale_transfer_views.xml",
+          "records": [
+            {
+              "id": "sale_transfer_view_list",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "sale_transfer_view_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "sale_transfer_view_search",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "sale_transfer_action",
+              "model": "ir.actions.act_window"
+            }
+          ],
+          "menus": [
+            {
+              "id": "menu_sale_transfer",
+              "name": "Pedido Transfer",
+              "parent": "sale.sale_order_menu",
+              "action": "sale_transfer_action",
+              "groups": "",
+              "sequence": "50"
+            }
+          ],
+          "actions": [
+            {
+              "id": "sale_transfer_action",
+              "model": "ir.actions.act_window",
+              "name": "Sale Transfers",
+              "res_model": "sale.transfer",
+              "view_mode": "list,form"
+            }
+          ],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/stock_lot_views.xml",
+          "records": [
+            {
+              "id": "view_stock_lot_form_pharmadus_reception",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_stock_lot_form_quality_buttons",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_move_line_tree_pharmadus_lot_details",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/stock_lot_wizard_views.xml",
+          "records": [
+            {
+              "id": "view_stock_lot_creation_wizard_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_stock_lot_creation_wizard",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "view_stock_move_line_operation_tree_pharmadus_lot_creation",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_stock_move_line_operation_tree_pharmadus_expiry_labels",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [
+            {
+              "id": "action_stock_lot_creation_wizard",
+              "model": "ir.actions.act_window",
+              "name": "Crear lote",
+              "res_model": "stock.lot.creation.wizard",
+              "view_mode": "form"
+            }
+          ],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/stock_picking_views.xml",
+          "records": [
+            {
+              "id": "view_picking_form_pharmadus_lot_labels",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/views/stock_route_views.xml",
+          "records": [
+            {
+              "id": "view_stock_route_form_pharmadus_auto_approve_lot",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": [
+        {
+          "file": "pharmadus_base/data/pharmadus.product.base.form.csv",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "rows": 7,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus.product.grouping.csv",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "rows": 17,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus.product.line.csv",
+          "columns": [
+            "id",
+            "name",
+            "company_id/id"
+          ],
+          "rows": 9,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus.product.packaging.type.csv",
+          "columns": [
+            "id",
+            "name"
+          ],
+          "rows": 14,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus.product.purchase.line.csv",
+          "columns": [
+            "id",
+            "name",
+            "company_id/id"
+          ],
+          "rows": 6,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus.product.purchase.subline.csv",
+          "columns": [
+            "id",
+            "name",
+            "line_id/id",
+            "company_id/id"
+          ],
+          "rows": 52,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/data/pharmadus.product.subline.csv",
+          "columns": [
+            "id",
+            "name",
+            "line_id/id",
+            "company_id/id"
+          ],
+          "rows": 64,
+          "models": []
+        },
+        {
+          "file": "pharmadus_base/security/ir.model.access.csv",
+          "columns": [
+            "id",
+            "name",
+            "model_id:id",
+            "group_id:id",
+            "perm_read",
+            "perm_write",
+            "perm_create",
+            "perm_unlink"
+          ],
+          "rows": 24,
+          "models": [
+            "model_pharmadus_product_base_form",
+            "model_pharmadus_product_garment",
+            "model_pharmadus_product_grouping",
+            "model_pharmadus_product_line",
+            "model_pharmadus_product_packaging_type",
+            "model_pharmadus_product_purchase_line",
+            "model_pharmadus_product_purchase_subline",
+            "model_pharmadus_product_subline",
+            "model_sale_transfer",
+            "model_sale_transfer_line",
+            "model_stock_lot_creation_wizard"
+          ]
+        }
+      ]
+    },
+    "pharmadus_custom": {
+      "path": "pharmadus_custom",
+      "manifest": {
+        "name": "Pharmadus Custom",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "sale",
+          "stock"
+        ],
+        "data": [
+          "views/sale_order_views.xml",
+          "views/stock_lot_views.xml"
+        ],
+        "assets": {},
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": ""
+      },
+      "models": [
+        {
+          "class": "SaleOrder",
+          "file": "pharmadus_custom/models/sale_order.py",
+          "line": 6,
+          "name": null,
+          "inherit": "sale.order",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        }
+      ],
+      "xml": [
+        {
+          "file": "pharmadus_custom/views/sale_order_views.xml",
+          "records": [
+            {
+              "id": "view_order_form_custom_shipping_domain",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "sale_order_view_search_pending_confirmation",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_custom/views/stock_lot_views.xml",
+          "records": [
+            {
+              "id": "view_production_lot_form_custom",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": []
+    },
+    "pharmadus_stock_supplier_lot": {
+      "path": "pharmadus_stock_supplier_lot",
+      "manifest": {
+        "name": "Pharmadus Stock Supplier Lot",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "stock_picking_auto_create_lot"
+        ],
+        "data": [
+          "views/stock_move_line_views.xml"
+        ],
+        "assets": {},
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": "post_init_hook"
+      },
+      "models": [
+        {
+          "class": "StockLot",
+          "file": "pharmadus_stock_supplier_lot/models/stock_lot.py",
+          "line": 5,
+          "name": null,
+          "inherit": "stock.lot",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockMoveLine",
+          "file": "pharmadus_stock_supplier_lot/models/stock_move_line.py",
+          "line": 5,
+          "name": null,
+          "inherit": "stock.move.line",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        }
+      ],
+      "xml": [
+        {
+          "file": "pharmadus_stock_supplier_lot/views/stock_move_line_views.xml",
+          "records": [
+            {
+              "id": "view_stock_move_line_operation_tree_supplier_lot",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": []
+    },
+    "stock_lot_state": {
+      "path": "stock_lot_state",
+      "manifest": {
+        "name": "Stock Lot State",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "stock",
+          "product_expiry",
+          "stock_lock_lot"
+        ],
+        "data": [
+          "security/ir.model.access.csv",
+          "views/stock_lot_views.xml"
+        ],
+        "assets": {},
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": ""
+      },
+      "models": [
+        {
+          "class": "StockLot",
+          "file": "stock_lot_state/models/stock_lot.py",
+          "line": 4,
+          "name": null,
+          "inherit": "stock.lot",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "res.users"
+          ]
+        },
+        {
+          "class": "StockPicking",
+          "file": "stock_lot_state/models/stock_picking.py",
+          "line": 4,
+          "name": null,
+          "inherit": "stock.picking",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        }
+      ],
+      "xml": [
+        {
+          "file": "stock_lot_state/views/stock_lot_views.xml",
+          "records": [
+            {
+              "id": "view_production_lot_form_state",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_production_lot_tree_state",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_production_lot_search_state",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_production_lot_form_state_expiry",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": [
+        {
+          "file": "stock_lot_state/security/ir.model.access.csv",
+          "columns": [
+            "id",
+            "name",
+            "model_id:id",
+            "group_id:id",
+            "perm_read",
+            "perm_write",
+            "perm_create",
+            "perm_unlink"
+          ],
+          "rows": 1,
+          "models": [
+            "stock.model_stock_lot"
+          ]
+        }
+      ]
+    }
+  }
+}
