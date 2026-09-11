@@ -43,7 +43,12 @@ digraph pharmadus_addons {
   "pharmadus_custom" [style=filled, fillcolor="#e8f0fe"];
   "sale" -> "pharmadus_custom" [style=dashed];
   "stock" -> "pharmadus_custom" [style=dashed];
+  "purchase_stock" -> "pharmadus_custom" [style=dashed];
+  "stock_landed_costs" -> "pharmadus_custom" [style=dashed];
   "pharmadus_custom" -> "sale.order" [label="model", color="#888888"];
+  "pharmadus_custom" -> "stock.landed.cost" [label="model", color="#888888"];
+  "pharmadus_custom" -> "stock.move.line" [label="model", color="#888888"];
+  "pharmadus_custom" -> "stock.valuation.adjustment.lines" [label="model", color="#888888"];
   "pharmadus_stock_supplier_lot" [style=filled, fillcolor="#e8f0fe"];
   "stock_picking_auto_create_lot" -> "pharmadus_stock_supplier_lot" [style=dashed];
   "pharmadus_stock_supplier_lot" -> "stock.lot" [label="model", color="#888888"];

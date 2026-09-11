@@ -1,6 +1,6 @@
 # Models
 
-Generated: `2026-09-11T10:29:27+00:00`
+Generated: `2026-09-11T12:22:30+00:00`
 
 ## pharmadus_base
 
@@ -20,23 +20,26 @@ Generated: `2026-09-11T10:29:27+00:00`
 | PurchaseRequisition |  | purchase.requisition |  | pharmadus_base/models/purchase_requisition.py:6 |
 | ResPartner |  | res.partner |  | pharmadus_base/models/res_partner.py:6 |
 | ResUsers |  | res.users |  | pharmadus_base/models/res_users.py:6 |
-| SaleTransfer | sale.transfer |  | res.company, res.partner, sale.transfer.line | pharmadus_base/models/sale_transfer.py:7 |
-| SaleTransferLine | sale.transfer.line |  | product.packaging, product.product, product.template, sale.transfer, uom.uom | pharmadus_base/models/sale_transfer.py:131 |
+| SaleTransfer | sale.transfer |  | product.pricelist, res.company, res.currency, res.partner, sale.transfer.line | pharmadus_base/models/sale_transfer.py:14 |
+| SaleTransferLine | sale.transfer.line |  | product.packaging, product.pricelist.item, product.product, product.template, product.template.attribute.value, sale.transfer, uom.uom | pharmadus_base/models/sale_transfer.py:177 |
 | StockForecasted |  | stock.forecasted_product_product |  | pharmadus_base/models/stock_forecasted.py:6 |
 | StockLot |  | stock.lot | pharmadus.product.packaging.type | pharmadus_base/models/stock_lot.py:15 |
 | StockLotCreationWizard | stock.lot.creation.wizard |  | pharmadus.product.packaging.type, product.product, stock.move, stock.picking | pharmadus_base/models/stock_lot_wizard.py:6 |
 | StockMoveLine |  | stock.move.line | pharmadus.product.packaging.type | pharmadus_base/models/stock_move_line.py:13 |
 | StockRoute |  | stock.route |  | pharmadus_base/models/stock_route.py:6 |
 | StockValuationLayer |  | stock.valuation.layer |  | pharmadus_base/models/stock_valuation_layer.py:6 |
-| AccountInvoiceReport |  | account.invoice.report | pharmadus.product.line, pharmadus.product.purchase.line, pharmadus.product.purchase.subline, pharmadus.product.subline | pharmadus_base/report/account_invoice_report.py:7 |
+| AccountInvoiceReport |  | account.invoice.report | pharmadus.product.line, pharmadus.product.purchase.line, pharmadus.product.purchase.subline, pharmadus.product.subline, res.partner, res.partner.category | pharmadus_base/report/account_invoice_report.py:7 |
 | PurchaseReport |  | purchase.report | pharmadus.product.purchase.line, pharmadus.product.purchase.subline | pharmadus_base/report/purchase_report.py:7 |
-| SaleReport |  | sale.report | pharmadus.product.line, pharmadus.product.subline | pharmadus_base/report/sale_report.py:6 |
+| SaleReport |  | sale.report | pharmadus.product.line, pharmadus.product.subline, res.partner.category | pharmadus_base/report/sale_report.py:6 |
 
 ## pharmadus_custom
 
 | Class | _name | _inherit | Comodels | Location |
 | --- | --- | --- | --- | --- |
 | SaleOrder |  | sale.order |  | pharmadus_custom/models/sale_order.py:6 |
+| StockLandedCost |  | stock.landed.cost |  | pharmadus_custom/models/stock_landed_cost.py:6 |
+| StockMoveLine |  | stock.move.line |  | pharmadus_custom/models/stock_move_line.py:6 |
+| StockValuationAdjustmentLines |  | stock.valuation.adjustment.lines |  | pharmadus_custom/models/stock_valuation_adjustment_lines.py:9 |
 
 ## pharmadus_stock_supplier_lot
 

@@ -1,6 +1,6 @@
 # Views, Menus, Actions And Data
 
-Generated: `2026-09-11T10:29:27+00:00`
+Generated: `2026-09-11T12:22:30+00:00`
 
 ## pharmadus_base
 
@@ -112,7 +112,9 @@ Generated: `2026-09-11T10:29:27+00:00`
 | File | Records | Record Models |
 | --- | --- | --- |
 | pharmadus_custom/views/sale_order_views.xml | 2 | ir.ui.view |
+| pharmadus_custom/views/stock_landed_cost_views.xml | 1 | ir.ui.view |
 | pharmadus_custom/views/stock_lot_views.xml | 1 | ir.ui.view |
+| pharmadus_custom/views/stock_move_line_views.xml | 1 | ir.ui.view |
 
 ### Menus
 

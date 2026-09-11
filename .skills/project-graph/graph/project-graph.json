@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T10:29:27+00:00",
+  "generated_at": "2026-09-11T12:22:30+00:00",
   "repo_root": "/opt/pharmadus/odoo/custom/src/pharmadus",
   "addons": {
     "pharmadus_base": {
@@ -253,7 +253,7 @@
         {
           "class": "SaleTransfer",
           "file": "pharmadus_base/models/sale_transfer.py",
-          "line": 7,
+          "line": 14,
           "name": "sale.transfer",
           "inherit": null,
           "inherits": null,
@@ -264,7 +264,9 @@
             "One2many"
           ],
           "comodels": [
+            "product.pricelist",
             "res.company",
+            "res.currency",
             "res.partner",
             "sale.transfer.line"
           ]
@@ -272,19 +274,22 @@
         {
           "class": "SaleTransferLine",
           "file": "pharmadus_base/models/sale_transfer.py",
-          "line": 131,
+          "line": 177,
           "name": "sale.transfer.line",
           "inherit": null,
           "inherits": null,
           "description": "Sale Transfer Line",
           "transient": null,
           "field_types": [
+            "Many2many",
             "Many2one"
           ],
           "comodels": [
             "product.packaging",
+            "product.pricelist.item",
             "product.product",
             "product.template",
+            "product.template.attribute.value",
             "sale.transfer",
             "uom.uom"
           ]
@@ -394,7 +399,9 @@
             "pharmadus.product.line",
             "pharmadus.product.purchase.line",
             "pharmadus.product.purchase.subline",
-            "pharmadus.product.subline"
+            "pharmadus.product.subline",
+            "res.partner",
+            "res.partner.category"
           ]
         },
         {
@@ -428,7 +435,8 @@
           ],
           "comodels": [
             "pharmadus.product.line",
-            "pharmadus.product.subline"
+            "pharmadus.product.subline",
+            "res.partner.category"
           ]
         }
       ],
@@ -1309,11 +1317,15 @@
         "version": "18.0.1.0.0",
         "depends": [
           "sale",
-          "stock"
+          "stock",
+          "purchase_stock",
+          "stock_landed_costs"
         ],
         "data": [
           "views/sale_order_views.xml",
-          "views/stock_lot_views.xml"
+          "views/stock_lot_views.xml",
+          "views/stock_move_line_views.xml",
+          "views/stock_landed_cost_views.xml"
         ],
         "assets": {},
         "installable": true,
@@ -1327,6 +1339,44 @@
           "line": 6,
           "name": null,
           "inherit": "sale.order",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockLandedCost",
+          "file": "pharmadus_custom/models/stock_landed_cost.py",
+          "line": 6,
+          "name": null,
+          "inherit": "stock.landed.cost",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockMoveLine",
+          "file": "pharmadus_custom/models/stock_move_line.py",
+          "line": 6,
+          "name": null,
+          "inherit": "stock.move.line",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": []
+        },
+        {
+          "class": "StockValuationAdjustmentLines",
+          "file": "pharmadus_custom/models/stock_valuation_adjustment_lines.py",
+          "line": 9,
+          "name": null,
+          "inherit": "stock.valuation.adjustment.lines",
           "inherits": null,
           "description": null,
           "transient": null,
@@ -1352,10 +1402,34 @@
           "templates": []
         },
         {
+          "file": "pharmadus_custom/views/stock_landed_cost_views.xml",
+          "records": [
+            {
+              "id": "view_stock_landed_cost_form_custom",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
           "file": "pharmadus_custom/views/stock_lot_views.xml",
           "records": [
             {
               "id": "view_production_lot_form_custom",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_custom/views/stock_move_line_views.xml",
+          "records": [
+            {
+              "id": "view_move_line_tree_custom",
               "model": "ir.ui.view"
             }
           ],
