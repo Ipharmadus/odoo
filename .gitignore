@@ -210,3 +210,4 @@ __marimo__/
 
 # Credenciales para la migración de datos
 /migracion_pharmadus_8_18/config.json
+/migracion_pharmadus_8_18/config.json.*
