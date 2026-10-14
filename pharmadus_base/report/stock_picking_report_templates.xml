@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <!--
+        Albarán de recepción (informe estándar stock.report_deliveryslip).
+
+        Para las recepciones (picking_type_code == 'incoming') se sustituyen las
+        tablas estándar por una propia con las columnas que necesita almacén:
+
+            Producto | Entregado | Lote proveedor | Lote interno |
+            Tipo envase | Envases | Palets
+
+        Los datos de lote de proveedor, tipo de envase, envases y palets se
+        capturan en las líneas de operaciones (stock.move.line), que es lo que
+        se rellena en el asistente de movimiento de stock.
+
+        Notas:
+        - Las tablas estándar se ocultan solo en recepciones, así que las
+          salidas y transferencias internas siguen imprimiéndose igual.
+        - Al no usarse la tabla estándar de operaciones, la columna de fecha de
+          caducidad que añade product_expiry no aparece en la recepción.
+        - Si la recepción todavía no tiene líneas de operaciones, se muestra el
+          producto con la cantidad demandada y el resto de columnas vacías.
+        - Las cantidades se imprimen sin ceros sobrantes (150 kg y no
+          150,000000 kg) con stock.picking._pharmadus_format_qty().
+        - La nota del albarán (stock.picking.note) se imprime detrás de las
+          líneas, solo en recepciones.
+    -->
+    <record id="view_picking_form_pharmadus_receipt_report" model="ir.ui.view">
+        <field name="name">stock.picking.report.receipt.pharmadus</field>
+        <!-- OJO: las plantillas QWeb de informe NO llevan modelo. Si se define,
+             ir.ui.view._get_inheriting_views la excluye de la cadena de herencia
+             (la consulta recursiva exige coalesce(model,'') = coalesce(parent.model,'')),
+             y la personalización no se aplicaría al imprimir. -->
+        <field name="model" eval="False"/>
+        <field name="inherit_id" ref="stock.report_delivery_document"/>
+        <field name="arch" type="xml">
+
+            <!-- Tabla estándar de movimientos (albarán sin validar): fuera en recepciones -->
+            <xpath expr="//table[@name='stock_move_table']" position="attributes">
+                <attribute name="t-if">o.state != 'done' and o.picking_type_code != 'incoming'</attribute>
+            </xpath>
+
+            <!-- Tabla estándar de operaciones (albarán validado): fuera en recepciones -->
+            <xpath expr="//table[@name='stock_move_line_table']" position="attributes">
+                <attribute name="t-elif">o.move_line_ids and o.state == 'done' and o.picking_type_code != 'incoming'</attribute>
+            </xpath>
+
+            <!-- Tabla propia de recepciones -->
+            <xpath expr="//table[@name='stock_move_table']" position="after">
+                <table
+                    class="table table-borderless"
+                    t-if="o.picking_type_code == 'incoming'"
+                    name="pharmadus_receipt_table"
+                >
+                    <thead>
+                        <tr>
+                            <th name="ph_th_product">Producto</th>
+                            <th name="ph_th_delivered" class="text-end">Entregado</th>
+                            <th name="ph_th_supplier_lot" class="text-center">Lote proveedor</th>
+                            <th name="ph_th_lot" class="text-center">Lote interno</th>
+                            <th name="ph_th_packaging_type" class="text-center">Tipo envase</th>
+                            <th name="ph_th_package_count" class="text-center">Envases</th>
+                            <th name="ph_th_pallet_count" class="text-center">Palets</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Con líneas de operaciones: lo capturado en el asistente -->
+                        <t t-if="o.move_line_ids">
+                            <tr t-foreach="o.move_line_ids" t-as="move_line">
+                                <td>
+                                    <span t-field="move_line.product_id.name"/>
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <t t-if="move_line.quantity">
+                                        <span t-out="o._pharmadus_format_qty(move_line.quantity)"/>
+                                        <span t-field="move_line.product_uom_id" groups="uom.group_uom"/>
+                                    </t>
+                                </td>
+                                <td class="text-center">
+                                    <!-- Lote de proveedor: el capturado en la línea (asistente) o,
+                                         si el lote ya existe, su referencia. -->
+                                    <t t-if="'supplier_lot_ref' in move_line._fields">
+                                        <span t-out="move_line.supplier_lot_ref or move_line.lot_id.ref or ''"/>
+                                    </t>
+                                    <t t-else="">
+                                        <span t-out="move_line.lot_id.ref or ''"/>
+                                    </t>
+                                </td>
+                                <td class="text-center">
+                                    <!-- Lote interno: si aún no está validado solo hay nombre de lote. -->
+                                    <span t-out="move_line.lot_id.name or move_line.lot_name or ''"/>
+                                </td>
+                                <td class="text-center">
+                                    <span t-field="move_line.pharmadus_packaging_type_id.name"/>
+                                </td>
+                                <td class="text-center">
+                                    <span t-if="move_line.pharmadus_package_count" t-field="move_line.pharmadus_package_count"/>
+                                </td>
+                                <td class="text-center">
+                                    <span t-if="move_line.pharmadus_pallet_count" t-field="move_line.pharmadus_pallet_count"/>
+                                </td>
+                            </tr>
+                        </t>
+                        <!-- Sin líneas todavía: producto y cantidad demandada, resto vacío -->
+                        <t t-else="">
+                            <tr t-foreach="o.move_ids.filtered(lambda m: m.product_uom_qty)" t-as="move">
+                                <td>
+                                    <span t-field="move.product_id.name"/>
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <span t-out="o._pharmadus_format_qty(move.product_uom_qty)"/>
+                                    <span t-field="move.product_uom" groups="uom.group_uom"/>
+                                </td>
+                                <td/>
+                                <td/>
+                                <td/>
+                                <td/>
+                                <td/>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+
+                <!-- Nota del albarán, justo detrás de las líneas -->
+                <div
+                    t-if="o.picking_type_code == 'incoming' and o.note"
+                    class="mt-4"
+                    name="pharmadus_receipt_note"
+                >
+                    <strong>Nota</strong>
+                    <div t-field="o.note"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

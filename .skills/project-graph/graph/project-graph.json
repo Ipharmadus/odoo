@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-11T12:22:30+00:00",
+  "generated_at": "2026-10-14T12:23:29+00:00",
   "repo_root": "/opt/pharmadus/odoo/custom/src/pharmadus",
   "addons": {
     "pharmadus_base": {
@@ -35,6 +35,7 @@
           "views/sale_transfer_views.xml",
           "report/purchase_order_templates.xml",
           "report/stock_lot_label_templates.xml",
+          "report/stock_picking_report_templates.xml",
           "views/stock_picking_views.xml",
           "data/pharmadus.product.line.csv",
           "data/pharmadus.product.subline.csv",
@@ -358,6 +359,18 @@
           ]
         },
         {
+          "class": "StockPicking",
+          "file": "pharmadus_base/models/stock_picking.py",
+          "line": 7,
+          "name": null,
+          "inherit": "stock.picking",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
           "class": "StockRoute",
           "file": "pharmadus_base/models/stock_route.py",
           "line": 6,
@@ -550,6 +563,18 @@
             "report_lot_rejected_label",
             "report_lot_state_label"
           ]
+        },
+        {
+          "file": "pharmadus_base/report/stock_picking_report_templates.xml",
+          "records": [
+            {
+              "id": "view_picking_form_pharmadus_receipt_report",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
         },
         {
           "file": "pharmadus_base/security/ir_rule.xml",

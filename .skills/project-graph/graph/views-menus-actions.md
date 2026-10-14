@@ -1,6 +1,6 @@
 # Views, Menus, Actions And Data
 
-Generated: `2026-09-11T12:22:30+00:00`
+Generated: `2026-10-14T12:23:29+00:00`
 
 ## pharmadus_base
 
@@ -14,6 +14,7 @@ Generated: `2026-09-11T12:22:30+00:00`
 | pharmadus_base/report/purchase_order_templates.xml | 0 |  |
 | pharmadus_base/report/sale_transfer_report_templates.xml | 0 |  |
 | pharmadus_base/report/stock_lot_label_templates.xml | 8 | ir.actions.report, report.paperformat |
+| pharmadus_base/report/stock_picking_report_templates.xml | 1 | ir.ui.view |
 | pharmadus_base/security/ir_rule.xml | 10 | ir.rule |
 | pharmadus_base/static/src/stock_forecasted/forecasted_details.xml | 0 |  |
 | pharmadus_base/views/pharmadus_product_specification_views.xml | 24 | ir.actions.act_window, ir.ui.view |

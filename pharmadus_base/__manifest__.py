@@ -36,6 +36,7 @@
         "views/sale_transfer_views.xml",
         "report/purchase_order_templates.xml",
         "report/stock_lot_label_templates.xml",
+        "report/stock_picking_report_templates.xml",
         "views/stock_picking_views.xml",
         "data/pharmadus.product.line.csv",
         "data/pharmadus.product.subline.csv",

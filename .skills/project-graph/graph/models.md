@@ -1,6 +1,6 @@
 # Models
 
-Generated: `2026-09-11T12:22:30+00:00`
+Generated: `2026-10-14T12:23:29+00:00`
 
 ## pharmadus_base
 
@@ -26,6 +26,7 @@ Generated: `2026-09-11T12:22:30+00:00`
 | StockLot |  | stock.lot | pharmadus.product.packaging.type | pharmadus_base/models/stock_lot.py:15 |
 | StockLotCreationWizard | stock.lot.creation.wizard |  | pharmadus.product.packaging.type, product.product, stock.move, stock.picking | pharmadus_base/models/stock_lot_wizard.py:6 |
 | StockMoveLine |  | stock.move.line | pharmadus.product.packaging.type | pharmadus_base/models/stock_move_line.py:13 |
+| StockPicking |  | stock.picking |  | pharmadus_base/models/stock_picking.py:7 |
 | StockRoute |  | stock.route |  | pharmadus_base/models/stock_route.py:6 |
 | StockValuationLayer |  | stock.valuation.layer |  | pharmadus_base/models/stock_valuation_layer.py:6 |
 | AccountInvoiceReport |  | account.invoice.report | pharmadus.product.line, pharmadus.product.purchase.line, pharmadus.product.purchase.subline, pharmadus.product.subline, res.partner, res.partner.category | pharmadus_base/report/account_invoice_report.py:7 |

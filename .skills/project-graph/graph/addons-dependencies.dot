@@ -35,6 +35,7 @@ digraph pharmadus_addons {
   "pharmadus_base" -> "stock.lot" [label="model", color="#888888"];
   "pharmadus_base" -> "stock.lot.creation.wizard" [label="model", color="#888888"];
   "pharmadus_base" -> "stock.move.line" [label="model", color="#888888"];
+  "pharmadus_base" -> "stock.picking" [label="model", color="#888888"];
   "pharmadus_base" -> "stock.route" [label="model", color="#888888"];
   "pharmadus_base" -> "stock.valuation.layer" [label="model", color="#888888"];
   "pharmadus_base" -> "account.invoice.report" [label="model", color="#888888"];

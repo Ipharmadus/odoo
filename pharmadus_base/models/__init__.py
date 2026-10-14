@@ -9,6 +9,7 @@ from . import res_users
 from . import stock_route
 from . import stock_lot
 from . import stock_move_line
+from . import stock_picking
 from . import stock_forecasted
 from . import sale_transfer
 from . import stock_valuation_layer
