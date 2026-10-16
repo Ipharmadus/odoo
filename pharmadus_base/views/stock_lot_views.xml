@@ -31,11 +31,45 @@
             </xpath>
             <xpath expr="//notebook" position="inside">
                 <page name="pharmadus_reception" string="Recepción">
-                    <group>
-                        <group>
+                    <group col="4">
+                        <group name="pharmadus_reception_packaging">
                             <field name="pharmadus_packaging_type_id"/>
                             <field name="pharmadus_package_count"/>
                             <field name="pharmadus_pallet_count"/>
+                        </group>
+                        <group
+                            name="pharmadus_reception_receipts"
+                            string="Albaranes de recepción"
+                            colspan="3"
+                        >
+                            <field
+                                name="pharmadus_receipt_picking_ids"
+                                nolabel="1"
+                                colspan="2"
+                                readonly="1"
+                            >
+                                <list
+                                    create="0"
+                                    delete="0"
+                                    default_order="date_done desc, id desc"
+                                >
+                                    <field name="name" string="Albarán"/>
+                                    <field name="partner_id" string="Proveedor"/>
+                                    <field name="date_done" string="Fecha"/>
+                                    <field
+                                        name="state"
+                                        widget="badge"
+                                        decoration-success="state == 'done'"
+                                    />
+                                    <button
+                                        name="action_pharmadus_open_receipt"
+                                        type="object"
+                                        string="Ver albarán"
+                                        class="btn-link"
+                                        help="Abrir el albarán"
+                                    />
+                                </list>
+                            </field>
                         </group>
                     </group>
                 </page>

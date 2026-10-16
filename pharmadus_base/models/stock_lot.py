@@ -26,6 +26,42 @@ class StockLot(models.Model):
     pharmadus_pallet_count = fields.Integer(
         string="Nº de pallets",
     )
+    pharmadus_receipt_picking_ids = fields.Many2many(
+        comodel_name="stock.picking",
+        string="Albaranes de recepción",
+        compute="_compute_pharmadus_receipt_picking_ids",
+        help="Albaranes de entrada (recepciones) por los que entró el lote.",
+    )
+
+    def _compute_pharmadus_receipt_picking_ids(self):
+        """Albaranes de entrada por los que entró la mercancía del lote.
+
+        Se miran las líneas de movimiento (``stock.move.line``) porque son las
+        que llevan el lote y de ellas se saca el albarán; sólo cuentan los
+        albaranes de entrada (``incoming``) y se descartan los cancelados. Se
+        incluyen los que aún no están validados porque el lote se crea durante
+        la recepción (asistente de creación de lotes), que es justo el albarán
+        del que procede.
+
+        Como el ``delivery_ids`` del núcleo, el campo no declara dependencias:
+        se calcula al leerlo.
+        """
+        picking_ids_by_lot = {}
+        move_lines = self.env["stock.move.line"].search(
+            [
+                ("lot_id", "in", self.ids),
+                ("picking_id.picking_type_id.code", "=", "incoming"),
+                ("picking_id.state", "!=", "cancel"),
+            ]
+        )
+        for move_line in move_lines:
+            picking_ids_by_lot.setdefault(move_line.lot_id.id, set()).add(
+                move_line.picking_id.id
+            )
+        for lot in self:
+            lot.pharmadus_receipt_picking_ids = list(
+                picking_ids_by_lot.get(lot.id, ())
+            )
 
     def _pharmadus_auto_approve_if_configured(self):
         lots_to_approve = self.filtered(lambda lot: lot.state == "pending")

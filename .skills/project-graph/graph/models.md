@@ -1,6 +1,6 @@
 # Models
 
-Generated: `2026-10-16T12:34:31+00:00`
+Generated: `2026-10-16T13:03:48+00:00`
 
 ## pharmadus_base
 
@@ -23,7 +23,7 @@ Generated: `2026-10-16T12:34:31+00:00`
 | SaleTransfer | sale.transfer |  | product.pricelist, res.company, res.currency, res.partner, sale.transfer.line | pharmadus_base/models/sale_transfer.py:14 |
 | SaleTransferLine | sale.transfer.line |  | product.packaging, product.pricelist.item, product.product, product.template, product.template.attribute.value, sale.transfer, uom.uom | pharmadus_base/models/sale_transfer.py:177 |
 | StockForecasted |  | stock.forecasted_product_product |  | pharmadus_base/models/stock_forecasted.py:6 |
-| StockLot |  | stock.lot | pharmadus.product.packaging.type | pharmadus_base/models/stock_lot.py:15 |
+| StockLot |  | stock.lot | pharmadus.product.packaging.type, stock.picking | pharmadus_base/models/stock_lot.py:15 |
 | StockLotCreationWizard | stock.lot.creation.wizard |  | pharmadus.product.packaging.type, product.product, stock.move, stock.picking | pharmadus_base/models/stock_lot_wizard.py:6 |
 | StockMoveLine |  | stock.move.line | pharmadus.product.packaging.type | pharmadus_base/models/stock_move_line.py:13 |
 | StockPicking |  | stock.picking |  | pharmadus_base/models/stock_picking.py:7 |

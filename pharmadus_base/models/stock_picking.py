@@ -7,6 +7,17 @@ from odoo.tools import float_round
 class StockPicking(models.Model):
     _inherit = "stock.picking"
 
+    def action_pharmadus_open_receipt(self):
+        """Abre el albarán desde la lista de recepciones de la ficha del lote.
+
+        Al pulsar una fila de un campo x2many incrustado en un formulario Odoo
+        abre un diálogo, así que la lista de albaranes lleva un botón por fila
+        que devuelve esta acción: navega al albarán de verdad (miga de pan
+        incluida) en lugar de abrirlo en una ventana modal.
+        """
+        self.ensure_one()
+        return self.get_formview_action()
+
     @api.model
     def _pharmadus_format_qty(self, value, precision=6):
         """Devuelve una cantidad sin ceros sobrantes: 150 y no 150,000000.
