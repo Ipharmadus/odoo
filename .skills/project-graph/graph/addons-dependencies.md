@@ -1,6 +1,6 @@
 # Addons Dependencies
 
-Generated: `2026-10-14T12:23:29+00:00`
+Generated: `2026-10-16T12:34:31+00:00`
 
 | Addon | Display Name | Version | Depends | Installable |
 | --- | --- | --- | --- | --- |

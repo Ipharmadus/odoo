@@ -80,6 +80,50 @@ class StockLot(models.Model):
         category_name = (self.product_id.categ_id.complete_name or "").lower()
         return "materia prima" in category_name
 
+    def _pharmadus_barcode_size(self, value, alto_px=120, alto_mm=10.0, ancho_mm=96.0):
+        """Tamano con el que pedir un codigo de barras SIN deformarlo.
+
+        Code128 ocupa un numero entero de modulos segun el texto (90 para
+        ``FAQFN``, 145 para ``MPR/26/386``, 200 para ``V-GL5008-25-002``). Para que
+        el lector lo reconozca TODOS los modulos tienen que medir lo mismo de
+        ancho, asi que el ancho pedido tiene que ser un multiplo exacto del numero
+        de modulos (``modulos * k``). Pidiendo un ancho redondo (el 1160 que se
+        puso antes) reportlab reparte los modulos en ese ancho y las barras salen
+        mas gordas o mas finas de lo que toca: el codigo se ve, pero no se lee.
+
+        Ademas el modulo no puede ser de cualquier grosor:
+
+        - por debajo de ~0,19 mm los lectores de mano fallan;
+        - muy grueso tampoco vale: con el ancho redondo anterior el codigo de la
+          referencia salia con modulos de 0,98 mm y no habia manera de leerlo.
+
+        Se apunta a **0,33 mm** de modulo, que es lo habitual en etiquetas de
+        almacen. Si el texto es tan largo que con ese modulo no cabe en la
+        etiqueta (hay referencias de 585 modulos), se reduce el modulo lo justo
+        para que entre, manteniendo siempre la proporcion.
+
+        :return: (ancho_px, alto_px) para pasar al widget de codigo de barras
+        """
+        from reportlab.graphics.barcode import code128
+
+        try:
+            modulos = int(code128.Code128(value, barWidth=1, barHeight=1, quiet=0).width)
+        except Exception:  # noqa: BLE001
+            # Si reportlab no sabe codificarlo, tampoco el widget: tamano minimo.
+            return alto_px, alto_px
+        if modulos <= 0:
+            return alto_px, alto_px
+
+        # Modulo objetivo: 0,33 mm. Cada pixel del PNG mide alto_mm/alto_px mm al
+        # imprimirse (el PNG se pinta a alto_mm de alto).
+        mm_por_px = alto_mm / alto_px
+        k = int(round(0.33 / mm_por_px)) or 1
+        # Si con ese modulo el codigo no cabe, se adelgaza hasta que entre.
+        ancho_px_max = ancho_mm / mm_por_px
+        while k > 1 and modulos * k > ancho_px_max:
+            k -= 1
+        return modulos * k, alto_px
+
     def _pharmadus_get_labels_to_print(self):
         self.ensure_one()
         package_count = max(self.pharmadus_package_count or 0, 0)

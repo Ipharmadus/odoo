@@ -14,7 +14,10 @@
         <field name="header_line" eval="False"/>
         <field name="header_spacing">0</field>
         <field name="disable_shrinking" eval="True"/>
-        <field name="dpi">90</field>
+        <!-- dpi 96 y no 90: con cualquier otro valor Odoo anade un zoom de 96/dpi y
+             la etiqueta, que mide exactamente el papel, se sale y sale una hoja
+             en blanco detras. -->
+        <field name="dpi">96</field>
     </record>
 
     <record id="paperformat_lot_reception_labels_pharmadus" model="report.paperformat">
@@ -31,7 +34,7 @@
         <field name="header_line" eval="False"/>
         <field name="header_spacing">0</field>
         <field name="disable_shrinking" eval="True"/>
-        <field name="dpi">90</field>
+        <field name="dpi">96</field>
     </record>
 
     <record id="paperformat_lot_state_labels_pharmadus" model="report.paperformat">
@@ -48,7 +51,7 @@
         <field name="header_line" eval="False"/>
         <field name="header_spacing">0</field>
         <field name="disable_shrinking" eval="True"/>
-        <field name="dpi">90</field>
+        <field name="dpi">96</field>
     </record>
 
     <template id="report_lot_labels">
@@ -256,57 +259,49 @@
     <template id="report_lot_sampling_reception_label">
         <t t-call="web.html_container">
             <style type="text/css">
+                /* Etiqueta de 62 x 28 mm (paperformat_lot_reception_labels_pharmadus).
+                   Dos manias del motor de wkhtmltopdf 0.12.6 que hay que respetar:
+                     - no maqueta display:flex, asi que las filas van con
+                       inline-block y ancho fijo, o el valor se cae a la linea de abajo;
+                     - el paperformat lleva dpi 96 a proposito: con dpi 90 Odoo anade
+                       --zoom 1.0667 y la etiqueta, que mide justo el papel, se sale
+                       y se imprime una segunda etiqueta en blanco.
+                   Los codigos de barras laterales se quitaron el 2026-10-16: al ir
+                   girados, el motor los rasterizaba a ~137 px y salian con grises
+                   ilegibles (ver ESTADO, apartado 13.5). */
                 html, body { margin: 0; padding: 0; }
-                .pharmadus-sampling-reception { box-sizing: border-box; height: 28mm; overflow: hidden; padding: 0.5mm 1mm; page-break-inside: avoid; position: relative; width: 62mm; }
+                .pharmadus-sampling-reception { box-sizing: border-box; font-family: Helvetica, Arial, sans-serif; height: 28mm; overflow: hidden; page-break-inside: avoid; position: relative; width: 62mm; }
                 .pharmadus-sampling-reception--break-before { page-break-before: always; }
-                .pharmadus-sampling-reception__side { height: 27mm; overflow: hidden; position: absolute; top: 0.5mm; width: 7mm; }
-                .pharmadus-sampling-reception__side--left { left: 0.5mm; }
-                .pharmadus-sampling-reception__side--right { right: 0.5mm; }
-                .pharmadus-sampling-reception__side-content { height: 7mm; position: absolute; top: 10mm; width: 27mm; }
-                .pharmadus-sampling-reception__side--left .pharmadus-sampling-reception__side-content { left: -10mm; transform: rotate(-90deg); transform-origin: center center; }
-                .pharmadus-sampling-reception__side--right .pharmadus-sampling-reception__side-content { right: -10mm; transform: rotate(90deg); transform-origin: center center; }
-                .pharmadus-sampling-reception__side-barcode { display: block; height: 5mm; width: 27mm; }
-                .pharmadus-sampling-reception__side-text { font-size: 5px; font-weight: 700; line-height: 1; margin-top: 0.5mm; overflow: hidden; text-align: center; white-space: nowrap; width: 27mm; }
-                .pharmadus-sampling-reception__content { box-sizing: border-box; margin-left: 8mm; margin-right: 8mm; overflow: hidden; padding-top: 0.2mm; }
-                .pharmadus-sampling-reception__product { font-size: 9px; font-weight: 700; line-height: 1; max-height: 5mm; overflow: hidden; text-align: center; }
-                .pharmadus-sampling-reception__lot { font-size: 22px; font-weight: 700; line-height: 0.95; margin-top: 0.4mm; text-align: center; }
-                .pharmadus-sampling-reception__row { align-items: center; display: flex; font-size: 7px; line-height: 1; margin-top: 0.6mm; }
-                .pharmadus-sampling-reception__label { flex: 0 0 18mm; }
-                .pharmadus-sampling-reception__value { flex: 1 1 auto; font-size: 8px; line-height: 1; }
-                .pharmadus-sampling-reception__signature { height: 5.5mm; margin-left: 18mm; overflow: hidden; }
-                .pharmadus-sampling-reception__signature img { max-height: 5.5mm; max-width: 22mm; }
+                .pharmadus-sampling-reception__content { box-sizing: border-box; margin-left: 5mm; margin-right: 5mm; padding-top: 0.5mm; }
+                /* El nombre del producto puede ser largo: en vez de recortarlo se
+                   deja que salte de linea, y lo que viene detras (lote, referencia,
+                   fecha, persona) baja con el. Abajo hay sitio de sobra. */
+                .pharmadus-sampling-reception__product { font-size: 10px; font-weight: 700; line-height: 1.05; overflow: hidden; }
+                .pharmadus-sampling-reception__lot { font-size: 18.67px; font-weight: 700; line-height: 1; margin-top: 0.4mm; white-space: nowrap; }
+                /* La referencia del producto, a la mitad que el lote. */
+                .pharmadus-sampling-reception__ref { font-size: 9.33px; font-weight: 700; line-height: 1; margin-top: 0.3mm; white-space: nowrap; }
+                .pharmadus-sampling-reception__row { font-size: 8.5px; line-height: 1.2; margin-top: 1.1mm; overflow: hidden; white-space: nowrap; }
+                .pharmadus-sampling-reception__label { display: inline-block; width: 23mm; }
+                .pharmadus-sampling-reception__value { display: inline-block; }
             </style>
-            <t t-set="printing_user" t-value="env.user"/>
             <t t-set="has_previous_label" t-value="False"/>
             <t t-foreach="docs" t-as="lot">
-                <t t-set="lot_barcode" t-value="(lot.name or '').replace('-', '/')"/>
-                <t t-set="product_barcode" t-value="(lot.product_id.default_code or '').replace('-', '/')"/>
                 <div t-att-class="'pharmadus-sampling-reception%s' % (' pharmadus-sampling-reception--break-before' if has_previous_label else '')">
-                    <div class="pharmadus-sampling-reception__side pharmadus-sampling-reception__side--left">
-                        <div class="pharmadus-sampling-reception__side-content">
-                            <span class="pharmadus-sampling-reception__side-barcode" t-out="lot_barcode" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 520, 'height': 90, 'quiet': 0, 'img_style': 'display:block;width:27mm;height:5mm;'}"/>
-                            <div class="pharmadus-sampling-reception__side-text" t-out="lot.name or ''"/>
-                        </div>
-                    </div>
-                    <div class="pharmadus-sampling-reception__side pharmadus-sampling-reception__side--right">
-                        <div class="pharmadus-sampling-reception__side-content">
-                            <span t-if="product_barcode" class="pharmadus-sampling-reception__side-barcode" t-out="product_barcode" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 520, 'height': 90, 'quiet': 0, 'img_style': 'display:block;width:27mm;height:5mm;'}"/>
-                            <div class="pharmadus-sampling-reception__side-text" t-out="lot.product_id.default_code or ''"/>
-                        </div>
-                    </div>
                     <div class="pharmadus-sampling-reception__content">
                         <div class="pharmadus-sampling-reception__product" t-out="lot.product_id.name or ''"/>
                         <div class="pharmadus-sampling-reception__lot" t-out="lot.name or ''"/>
+                        <div t-if="lot.product_id.default_code" class="pharmadus-sampling-reception__ref" t-out="lot.product_id.default_code"/>
                         <div class="pharmadus-sampling-reception__row">
                             <div class="pharmadus-sampling-reception__label">Fecha toma muestra:</div>
-                            <div class="pharmadus-sampling-reception__value" t-out="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y')"/>
+                            <!-- La fecha es la de CREACION del lote, que es cuando
+                                 entro la mercancia, no la de impresion. El campo
+                                 date_in no sirve: en los lotes de materia prima
+                                 recientes esta vacio (comprobado en 92953). -->
+                            <div class="pharmadus-sampling-reception__value" t-out="(lot.create_date and context_timestamp(lot.create_date) or context_timestamp(datetime.datetime.now())).strftime('%d/%m/%Y')"/>
                         </div>
                         <div class="pharmadus-sampling-reception__row">
                             <div class="pharmadus-sampling-reception__label">Realizado por:</div>
-                            <div class="pharmadus-sampling-reception__value" t-out="printing_user.name"/>
-                        </div>
-                        <div class="pharmadus-sampling-reception__signature">
-                            <img t-if="printing_user.pharmadus_signature_image" t-att-src="image_data_uri(printing_user.pharmadus_signature_image)" alt="Firma"/>
+                            <div class="pharmadus-sampling-reception__value" t-out="env.user.name"/>
                         </div>
                     </div>
                 </div>
@@ -355,32 +350,71 @@
     <template id="report_lot_state_label">
         <t t-call="web.html_container">
             <style type="text/css">
+                /* Etiqueta de 100 x 62 mm (paperformat_lot_state_labels_pharmadus),
+                   rehecha el 2026-10-16 copiando la de Odoo 8 que paso el usuario.
+                   Posiciones sacadas de aquel PDF (leer_etiqueta_pdf.py), en mm
+                   desde arriba: producto 4,3 | referencia 14,7 | TITULO 24,6 |
+                   lote 41,1 | fecha y firma 58,8.
+                   Todo va CENTRADO, y el titulo y el lote son mas pequenos que en
+                   el original (55pt y 35pt): alli los codigos de barras iban en
+                   los laterales, girados y saliendose de la etiqueta, y aqui van
+                   dentro; medido, con los tamanos originales el bloque se salia
+                   del alto.
+                   Manias del motor que condicionan el CSS:
+                     - no maqueta display:flex, se usan inline-block y bloques;
+                     - el paperformat lleva dpi 96 a proposito, o sale una hoja
+                       en blanco detras. */
                 html, body { margin: 0; padding: 0; }
-                .pharmadus-state-label { box-sizing: border-box; height: 62mm; overflow: hidden; padding: 3mm 4mm; page-break-inside: avoid; width: 100mm; }
+                .pharmadus-state-label { box-sizing: border-box; font-family: Helvetica, Arial, sans-serif; height: 62mm; overflow: hidden; page-break-inside: avoid; position: relative; width: 100mm; }
                 .pharmadus-state-label--break-before { page-break-before: always; }
-                .pharmadus-state-label__title { border: 1px solid #000; font-size: 36px; font-weight: 700; line-height: 1.1; padding: 1mm 0; text-align: center; }
-                .pharmadus-state-label__product { font-size: 16px; font-weight: 700; line-height: 1.1; margin-top: 2mm; max-height: 9mm; overflow: hidden; text-align: center; }
-                .pharmadus-state-label__lot { font-size: 26px; font-weight: 700; line-height: 1.05; margin-top: 2mm; text-align: center; }
-                .pharmadus-state-label__barcode { display: block; margin: 1mm auto 0; width: 82mm; }
-                .pharmadus-state-label__footer { align-items: flex-end; display: flex; font-size: 13px; justify-content: space-between; margin-top: 3mm; }
-                .pharmadus-state-label__signature { border-bottom: 1px solid #000; height: 12mm; min-width: 32mm; text-align: center; }
-                .pharmadus-state-label__signature img { max-height: 11mm; max-width: 30mm; }
+                /* El nombre del producto puede ser largo y saltar a dos lineas: con
+                   line-height 1,1 el bloque se salia de los 62 mm (64,7 medido),
+                   asi que va a 0,95 y los margenes entre bloques a 0,5 mm. Con eso
+                   dos lineas acaban en 60,7 mm y entran. */
+                .pharmadus-state-label__product { font-size: 18.67px; font-weight: 700; line-height: 0.95; margin-top: 0.5mm; overflow: hidden; text-align: center; }
+                /* El codigo se pinta fijando SOLO el alto (10 mm) y dejando el
+                   ancho automatico: asi se escala de forma uniforme y no se
+                   deforma. El ancho del PNG lo calcula _pharmadus_barcode_size()
+                   para que cada modulo mida lo mismo de ancho, que es lo que hace
+                   que el lector lo reconozca. Fijarle tambien el ancho (o pedirle
+                   al widget un ancho redondo) deforma las barras y el codigo se ve
+                   pero no se lee.
+                   El texto del codigo va MONTADO ENCIMA con fondo blanco, en la
+                   misma caja, para que no gaste altura propia. */
+                .pharmadus-state-label__barcode { margin-top: 0.5mm; position: relative; text-align: center; }
+                .pharmadus-state-label__barcode img { display: block; height: 10mm; margin: 0 auto; }
+                .pharmadus-state-label__barcode-text { background: #fff; font-size: 14px; left: 0; line-height: 1; position: absolute; right: 0; text-align: center; top: 0; }
+                .pharmadus-state-label__title { font-size: 46px; font-weight: 700; line-height: 1; margin-top: 0.5mm; text-align: center; white-space: nowrap; }
+                .pharmadus-state-label__lot { font-size: 40px; font-weight: 700; line-height: 1; margin-top: 0.5mm; text-align: center; white-space: nowrap; }
+                .pharmadus-state-label__footer { font-size: 20px; line-height: 1.2; margin-top: 0.5mm; overflow: hidden; white-space: nowrap; }
+                .pharmadus-state-label__footer-fecha { display: inline-block; margin-left: 3mm; }
+                .pharmadus-state-label__footer-firma { display: inline-block; margin-left: 3mm; }
+                .pharmadus-state-label__signature { border-bottom: 1px solid #000; display: inline-block; height: 4mm; margin-left: 2mm; vertical-align: bottom; width: 30mm; }
             </style>
-            <t t-set="printing_user" t-value="env.user"/>
             <t t-set="has_previous_label" t-value="False"/>
             <t t-foreach="docs" t-as="lot">
+                <t t-set="lot_barcode" t-value="(lot.name or '').replace('-', '/')"/>
+                <t t-set="product_barcode" t-value="(lot.product_id.default_code or '').replace('-', '/')"/>
+                <!-- El ancho del PNG tiene que ser multiplo exacto del numero de
+                     modulos del Code128, o reportlab reparte los modulos y las
+                     barras salen deformadas (se ven, pero el lector no las lee).
+                     El helper devuelve (ancho_px, alto_px) ya proporcionado. -->
+                <t t-set="product_size" t-value="lot._pharmadus_barcode_size(product_barcode) if product_barcode else (0, 0)"/>
+                <t t-set="lot_size" t-value="lot._pharmadus_barcode_size(lot_barcode)"/>
                 <div t-att-class="'pharmadus-state-label%s' % (' pharmadus-state-label--break-before' if has_previous_label else '')">
-                    <div class="pharmadus-state-label__title" t-out="label_title"/>
                     <div class="pharmadus-state-label__product" t-out="lot.product_id.name or ''"/>
-                    <div class="pharmadus-state-label__lot">Lote: <t t-out="lot.name or ''"/></div>
-                    <t t-set="lot_barcode" t-value="(lot.name or '').replace('-', '/')"/>
-                    <span class="pharmadus-state-label__barcode" t-out="lot_barcode" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 900, 'height': 90, 'quiet': 0, 'img_style': 'display:block;width:82mm;height:10mm;'}"/>
+                    <div t-if="product_barcode" class="pharmadus-state-label__barcode">
+                        <span t-out="product_barcode" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': product_size[0], 'height': product_size[1], 'quiet': 0, 'img_style': 'display:block;'}"/>
+                        <div class="pharmadus-state-label__barcode-text" t-out="lot.product_id.default_code or ''"/>
+                    </div>
+                    <div class="pharmadus-state-label__title" t-out="label_title"/>
+                    <div class="pharmadus-state-label__lot" t-out="lot.name or ''"/>
+                    <div class="pharmadus-state-label__barcode">
+                        <span t-out="lot_barcode" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': lot_size[0], 'height': lot_size[1], 'quiet': 0, 'img_style': 'display:block;'}"/>
+                    </div>
                     <div class="pharmadus-state-label__footer">
-                        <div>Fecha: <t t-out="context_timestamp(datetime.datetime.now()).strftime('%d-%m-%Y')"/></div>
-                        <div>Firma:</div>
-                        <div class="pharmadus-state-label__signature">
-                            <img t-if="printing_user.pharmadus_signature_image" t-att-src="image_data_uri(printing_user.pharmadus_signature_image)" alt="Firma"/>
-                        </div>
+                        <span class="pharmadus-state-label__footer-fecha">Fecha: <t t-out="context_timestamp(datetime.datetime.now()).strftime('%d-%m-%Y')"/></span>
+                        <span class="pharmadus-state-label__footer-firma">Firma:<span class="pharmadus-state-label__signature"/></span>
                     </div>
                 </div>
                 <t t-set="has_previous_label" t-value="True"/>
