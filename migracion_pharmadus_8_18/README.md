@@ -14,6 +14,7 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/migrate_customer_valued_picking.py`: marca `res.partner.valued_picking` en todos los clientes de Odoo 18.
 - `scripts/create_production_lines.py`: crea las líneas de producción de SIGI (modelo `mrp.routing` de Odoo 8) como centros de trabajo de Odoo 18, con su etiqueta.
 - `scripts/export_source_lines_map.py` y `scripts/add_production_line_operations.py`: exportan desde Odoo 8 la primera línea de cada plantilla de producto y añaden a cada BoM de Odoo 18 una operación con esa línea.
+- `scripts/normalize_lot_states.py`: traduce los estados de lote heredados de Odoo 8 (`draft`, `in_rev`, `revised`, vacío) a la selección del módulo `stock_lot_state` de Odoo 18 y bloquea los lotes rechazados.
 
 ## Requisitos
 
@@ -389,3 +390,60 @@ Notas:
   conviene hacerlo en SQL teniendo en cuenta las claves ajenas que apuntan a
   `mrp.routing.workcenter` (`mrp_workorder`, `stock_move`, `mrp_bom_line`, `mrp_bom_byproduct`
   y las dos tablas de relación).
+
+## Estados de lote
+
+`scripts/normalize_lot_states.py` normaliza el campo `state` de `stock.lot`. Los lotes llegaron al
+entorno de Odoo 18 dentro del volcado de la base de datos de Odoo 8, así que conservan el vocabulario
+de origen (`draft`, `in_rev`, `revised`, `approved`, `rejected`) mientras que el módulo
+`stock_lot_state` sólo define `pending`, `approved` y `rejected`. Los valores heredados no aparecen
+en los filtros del módulo, dejan el statusbar vacío y no aplican el bloqueo de solo lectura.
+
+Mapeo por defecto, conservador (ningún lote pasa a aprobado sin decisión humana):
+
+| Odoo 8 | Odoo 18 |
+| --- | --- |
+| `draft` (New) | `pending` |
+| `in_rev` (Revision Q) | `pending` |
+| `revised` (Revised) | `pending` |
+| vacío / NULL | `pending` |
+| `rejected` | `rejected` + `locked = True` |
+
+`approved` y `pending` se dejan como están. El mapeo se puede cambiar con `--map ORIGEN=DESTINO`
+(repetible, `-` representa el estado vacío), por ejemplo `--map revised=approved`.
+
+Simulación:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/normalize_lot_states.py \
+  --config migracion_pharmadus_8_18/config.json
+```
+
+Escritura real, con ficheros de reversión:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/normalize_lot_states.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --write --revert-out /tmp/lot_states_revert.json
+```
+
+Notas:
+
+- Es **idempotente**: sólo busca los valores heredados que aparecen en el mapeo, así que una segunda
+  pasada no encuentra nada que hacer.
+- Los lotes con **cantidades reservadas** no se bloquean, porque el constreñimiento de
+  `stock_lock_lot` lo prohíbe. Se informan como `CONFLICTO` y su `state` sí se normaliza.
+- La escritura usa `tracking_disable` (y `bypass_lock_permission_check` al bloquear) para no generar
+  `mail.message` ni exigir el grupo de bloqueo. `--with-tracking` conserva el seguimiento.
+- **Multi-compañía**: el script usa `allowed_company_ids` con todas las compañías del usuario de
+  `target` y avisa de las que no tiene. En el entorno de desarrollo el usuario del `config.json`
+  sólo tiene la compañía 1 y hay lotes en las compañías 6, 8 y 10, así que hay que añadírselas a
+  `res.users.company_ids` (o usar un usuario multi-compañía) para una pasada completa.
+- **Reversión**: se generan dos ficheros, `<nombre>.json` (detalle por lote) y `<nombre>.sql` (el que
+  se ejecuta). Tiene que ser SQL porque el ORM de Odoo 18 rechaza escribir valores fuera de la
+  selección del módulo (`ValueError: Wrong value for stock.lot.state: 'draft'`). El `.sql` se aplica
+  con `docker compose -f devel.yaml exec -T db psql -U odoo -d devel < lot_states_revert.sql`.
+- Estado del entorno de desarrollo (2026-10-19): 46.767 lotes, de los que 11.669 están en `draft`,
+  20 en `revised`, 3 en `in_rev` y 11 sin estado —**11.703 a normalizar**— y los 83 rechazados
+  siguen sin `locked`. Los 5.381 lotes creados en Odoo 8 después del volcado (2025-10-28) no están
+  en desarrollo.
