@@ -1,6 +1,6 @@
 # Views, Menus, Actions And Data
 
-Generated: `2026-10-16T13:03:48+00:00`
+Generated: `2026-10-19T10:26:12+00:00`
 
 ## pharmadus_base
 
@@ -23,7 +23,7 @@ Generated: `2026-10-16T13:03:48+00:00`
 | pharmadus_base/views/report_views.xml | 12 | ir.actions.act_window, ir.ui.view |
 | pharmadus_base/views/res_users_views.xml | 1 | ir.ui.view |
 | pharmadus_base/views/sale_transfer_views.xml | 4 | ir.actions.act_window, ir.ui.view |
-| pharmadus_base/views/stock_lot_views.xml | 3 | ir.ui.view |
+| pharmadus_base/views/stock_lot_views.xml | 6 | ir.ui.view |
 | pharmadus_base/views/stock_lot_wizard_views.xml | 4 | ir.actions.act_window, ir.ui.view |
 | pharmadus_base/views/stock_picking_views.xml | 1 | ir.ui.view |
 | pharmadus_base/views/stock_route_views.xml | 1 | ir.ui.view |

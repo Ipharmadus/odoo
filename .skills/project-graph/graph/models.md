@@ -1,6 +1,6 @@
 # Models
 
-Generated: `2026-10-16T13:03:48+00:00`
+Generated: `2026-10-19T10:26:12+00:00`
 
 ## pharmadus_base
 

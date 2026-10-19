@@ -113,4 +113,55 @@
             </xpath>
         </field>
     </record>
+
+    <!-- El botón "Traslados" del núcleo calcula `delivery_count` en cada carga del
+         formulario: stock.lot._find_delivery_ids_by_lot_iterative recorre toda la
+         genealogía del lote (stock_move_line_consume_rel tiene 57 M de filas), y en
+         las materias primas eso son minutos y MemoryError en el worker. Se deja el
+         botón sin contador y siempre visible (con `invisible="delivery_count == 0"`
+         el campo se seguiría calculando), de modo que el coste se paga sólo al
+         pulsar y no al abrir la ficha. -->
+    <record id="view_stock_lot_form_pharmadus_transfers" model="ir.ui.view">
+        <field name="name">stock.lot.form.pharmadus.transfers</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_lot_open_transfers']" position="replace">
+                <button
+                    name="action_pharmadus_open_transfers"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-truck"
+                    help="Albaranes de salida con este lote"
+                >
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Traslados</span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- `last_delivery_partner_id` ("Último cliente") usa la MISMA función de
+         genealogía que `delivery_count`, pero sólo para productos con seguimiento
+         por número de serie (en el lote MIT-25-096 tardaba más de 2 minutos). Como
+         el campo se calcula por el mero hecho de estar en la vista, se quita del
+         formulario y del listado. -->
+    <record id="view_stock_lot_form_pharmadus_last_partner" model="ir.ui.view">
+        <field name="name">stock.lot.form.pharmadus.last.partner</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='last_delivery_partner_id']" position="replace"/>
+        </field>
+    </record>
+
+    <record id="view_stock_lot_tree_pharmadus_last_partner" model="ir.ui.view">
+        <field name="name">stock.lot.tree.pharmadus.last.partner</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='last_delivery_partner_id']" position="replace"/>
+        </field>
+    </record>
 </odoo>

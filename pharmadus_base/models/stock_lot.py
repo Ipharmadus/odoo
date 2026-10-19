@@ -1,6 +1,6 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import fields, models
+from odoo import _, fields, models
 from odoo.osv import expression
 from odoo.tools.safe_eval import safe_eval
 
@@ -308,4 +308,40 @@ class StockLot(models.Model):
             }
         )
         action["context"] = action_context
+        return action
+
+    def action_pharmadus_open_transfers(self):
+        """Abre los albaranes de salida en los que se ha movido este lote.
+
+        Sustituye a ``action_lot_open_transfers`` del núcleo, que usa
+        ``delivery_ids``: ese campo recorre toda la genealogía del lote
+        (``_find_delivery_ids_by_lot_iterative``, con ``stock_move_line_consume_rel``
+        de 57 M de filas) y en una materia prima tarda minutos o revienta el worker.
+        Aquí se consultan directamente las líneas de movimiento del lote en
+        albaranes de salida, que van por el índice de ``lot_id``.
+
+        La diferencia es que sólo salen los albaranes en los que va **este** lote,
+        no los de los lotes fabricados con él.
+        """
+        self.ensure_one()
+        move_lines = self.env["stock.move.line"].search(
+            [
+                ("lot_id", "=", self.id),
+                ("picking_code", "=", "outgoing"),
+                ("picking_id.state", "!=", "cancel"),
+            ]
+        )
+        picking_ids = move_lines.picking_id.ids
+
+        action = {"res_model": "stock.picking", "type": "ir.actions.act_window"}
+        if len(picking_ids) == 1:
+            action.update({"view_mode": "form", "res_id": picking_ids[0]})
+        else:
+            action.update(
+                {
+                    "name": _("Albaranes de salida de %s", self.display_name),
+                    "domain": [("id", "in", picking_ids)],
+                    "view_mode": "list,form",
+                }
+            )
         return action

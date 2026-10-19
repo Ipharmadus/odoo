@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-16T13:03:48+00:00",
+  "generated_at": "2026-10-19T10:26:12+00:00",
   "repo_root": "/opt/pharmadus/odoo/custom/src/pharmadus",
   "addons": {
     "pharmadus_base": {
@@ -1174,6 +1174,18 @@
             },
             {
               "id": "view_move_line_tree_pharmadus_lot_details",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_stock_lot_form_pharmadus_transfers",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_stock_lot_form_pharmadus_last_partner",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_stock_lot_tree_pharmadus_last_partner",
               "model": "ir.ui.view"
             }
           ],
