@@ -325,9 +325,10 @@ le pide, corrige las asignaciones).
   campo company-dependent `specific_property_product_pricelist` de 18, que es el
   valor explícito (`property_product_pricelist` es computado y devuelve el
   efectivo, con la tarifa por defecto de la compañía como respaldo).
-- **Estados**: `ok`, `falta`, `distinta`, `tarifa_inexistente_en_destino`,
-  `cliente_no_existe_en_destino` y `sobra_en_destino` (tarifa puesta en 18 que no
-  viene de SIGI).
+- **Estados**: `ok`, `ok_por_defecto` (la tarifa de SIGI es la de por defecto y
+  Odoo 18 no guarda valor explícito), `falta`, `distinta`,
+  `tarifa_inexistente_en_destino`, `cliente_no_existe_en_destino` y
+  `sobra_en_destino` (tarifa puesta en 18 que no viene de SIGI).
 - Descarta las propiedades de clientes borrados: `ir_property.res_id` es una
   referencia sin clave ajena y en SIGI 57.711 de las 98.644 apuntan a clientes que
   ya no existen.

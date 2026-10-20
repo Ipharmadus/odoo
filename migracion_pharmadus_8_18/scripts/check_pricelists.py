@@ -310,7 +310,13 @@ def main():
             if not tarifa_destino_id:
                 estado = "tarifa_inexistente_en_destino"
             elif not datos["specific"]:
-                estado = "falta"
+                # Si la tarifa de SIGI es la de por defecto (país/compañía),
+                # Odoo 18 no guarda valor explícito: el efectivo ya es el bueno.
+                estado = (
+                    "ok_por_defecto"
+                    if datos["effective"] == tarifa_destino_id
+                    else "falta"
+                )
             elif datos["specific"] != tarifa_destino_id:
                 estado = "distinta"
             else:
@@ -334,7 +340,7 @@ def main():
 
     print("clientes/tarifas revisados: {} (por pareja cliente-compañía)".format(
         sum(resumen.values())))
-    for estado in ("ok", "falta", "distinta", "tarifa_inexistente_en_destino"):
+    for estado in ("ok", "ok_por_defecto", "falta", "distinta", "tarifa_inexistente_en_destino"):
         print("  {:<32} {}".format(estado, resumen.get(estado, 0)))
     print("  {:<32} {}".format("cliente_no_existe_en_destino", no_en_destino))
 
