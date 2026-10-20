@@ -198,13 +198,15 @@ class ProductTemplate(models.Model):
     )
     def _check_pharmadus_box_quantities(self):
         for record in self:
-            if record.pharmadus_elements_per_outer_box < 1:
+            # Contenedora y expositora admiten 0 (productos que no llevan caja de
+            # ese tipo); lo que no se admite es un negativo.
+            if record.pharmadus_elements_per_outer_box < 0:
                 raise ValidationError(
-                    "Los elementos por caja contenedora deben ser mayores o iguales que 1."
+                    "Los elementos por caja contenedora no pueden ser negativos."
                 )
-            if record.pharmadus_elements_per_display_box < 1:
+            if record.pharmadus_elements_per_display_box < 0:
                 raise ValidationError(
-                    "Los elementos por caja expositora deben ser mayores o iguales que 1."
+                    "Los elementos por caja expositora no pueden ser negativos."
                 )
             if record.pharmadus_elements_per_full_box < 1:
                 raise ValidationError(

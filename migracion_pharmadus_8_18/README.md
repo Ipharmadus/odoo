@@ -88,14 +88,18 @@ Correspondencia principal entre Odoo 8 y Odoo 18:
 | `purchase_subline` | `pharmadus_purchase_subline_id` | Coincidencia por `name` y por la línea de compra ya resuelta en destino. |
 | `grouping` | `pharmadus_grouping_id` | Coincidencia por `name`. |
 | `subgrouping` | `pharmadus_subgrouping` | Texto directo. |
-| `packing_internal` | `pharmadus_elements_per_outer_box` | Se normaliza a entero mínimo 1. |
-| `packing` | `pharmadus_elements_per_display_box` | Se normaliza a entero mínimo 1. |
+| `packing_internal` | `pharmadus_elements_per_outer_box` | Se lleva el valor real; admite 0. |
+| `packing` | `pharmadus_elements_per_display_box` | Se lleva el valor real; admite 0. |
 | `box_elements` | `pharmadus_elements_per_full_box` | Se normaliza a entero mínimo 1. |
 
 Notas sobre los numéricos:
 
-- Si el origen viene vacío, a cero o con un valor no válido, el script usa `1` para respetar las restricciones del modelo en Odoo 18.
+- `qty` y `box_elements` se normalizan a entero mínimo 1: si el origen viene vacío, a cero o con un valor no válido, el script escribe `1`.
+- `packing_internal` y `packing` se llevan tal cual vengan de Odoo 8, **0 incluido**: el modelo admite 0 en caja contenedora y expositora. Si vienen vacíos o no numéricos se escribe `0`, y los negativos se recortan a `0`.
 - La correspondencia de cajas se basa en la estructura de la vista "Specs" de Odoo 8.
+- **Sublínea sin línea**: el modelo de Odoo 18 exige que la sublínea pertenezca a la línea, y en Odoo 8 hay 27 plantillas activas con sublínea y sin línea (y casos con la línea sin resolver en destino). En esos casos se limpia la sublínea en destino y se avisa; se cuentan en `warnings_subline_without_line`.
+- Los catálogos se resuelven solo con registros de la compañía del producto o sin compañía; si el único candidato es de otra compañía no se asigna.
+- Un error de escritura no aborta la pasada: se informa como `ERROR destino ...`, se cuenta en `errors` y se sigue con el siguiente producto.
 
 ## Uso
 

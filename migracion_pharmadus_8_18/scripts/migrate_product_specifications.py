@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sys
+import xmlrpc.client
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
@@ -130,16 +131,20 @@ def log(message):
     print(message)
 
 
-def normalize_int(value, default=1):
+def normalize_int(value, default=1, minimum=1):
+    """Devuelve el entero del origen, redondeado.
+
+    Si el valor no es numerico o viene vacio se usa ``default``. Los valores por
+    debajo de ``minimum`` se recortan a ``minimum`` (las cajas contenedora y
+    expositora admiten 0 desde que el modelo lo permite).
+    """
     if value in (None, False, ""):
         return default
     try:
         int_value = int(round(float(value)))
     except (TypeError, ValueError):
         return default
-    if int_value < 1:
-        return default
-    return int_value
+    return max(int_value, minimum)
 
 
 def build_source_domain(product_ids):
@@ -170,9 +175,14 @@ def choose_catalog_record(candidates, target_company_id, parent_id=None):
         return None
 
     if parent_id:
-        by_parent = [item for item in candidates if m2o_id(item.get("line_id")) == parent_id]
-        if by_parent:
-            candidates = by_parent
+        # La sublinea tiene que colgar de la linea resuelta. Si ninguna candidata
+        # cuelga de ella no se devuelve nada: asignar una sublinea de otra linea
+        # hace que el modelo rechace la escritura.
+        candidates = [
+            item for item in candidates if m2o_id(item.get("line_id")) == parent_id
+        ]
+        if not candidates:
+            return None
 
     if target_company_id:
         same_company = [
@@ -187,7 +197,9 @@ def choose_catalog_record(candidates, target_company_id, parent_id=None):
     if global_items:
         return global_items[0]
 
-    return candidates[0]
+    # Nunca se devuelve un registro de otra compania: el modelo exige que las
+    # especificaciones sean de la compania del producto (o sin compania).
+    return None
 
 
 def resolve_catalog_value(
@@ -215,16 +227,17 @@ def resolve_catalog_value(
     return resolved
 
 
-def build_write_values(source_product, target_product, target, cache):
+def build_write_values(source_product, target_product, target, cache, issues):
     values = {}
     target_company_id = m2o_id(target_product.get("company_id"))
 
     values["pharmadus_quantity"] = normalize_int(source_product.get("qty"))
+    # Contenedora y expositora se llevan tal cual vengan de Odoo 8, 0 incluido.
     values["pharmadus_elements_per_outer_box"] = normalize_int(
-        source_product.get("packing_internal")
+        source_product.get("packing_internal"), default=0, minimum=0
     )
     values["pharmadus_elements_per_display_box"] = normalize_int(
-        source_product.get("packing")
+        source_product.get("packing"), default=0, minimum=0
     )
     values["pharmadus_elements_per_full_box"] = normalize_int(
         source_product.get("box_elements")
@@ -242,6 +255,21 @@ def build_write_values(source_product, target_product, target, cache):
         parent_field = M2O_PARENT_FIELD_MAP.get(source_field_name)
         if parent_field:
             parent_target_id = values.get(parent_field)
+            if not parent_target_id:
+                # El modelo exige que la sublinea pertenezca a la linea. En Odoo 8
+                # hay productos con sublinea y sin linea: sin linea no se puede
+                # asignar la sublinea, asi que se limpian las dos para no dejar el
+                # registro inconsistente (el destino puede arrastrar una sublinea
+                # de una migracion anterior).
+                issues.append(
+                    {
+                        "kind": "sublinea_sin_linea",
+                        "field": source_field_name,
+                        "value": source_name,
+                    }
+                )
+                values[target_field_name] = False
+                continue
 
         resolved_id = resolve_catalog_value(
             target=target,
@@ -251,8 +279,10 @@ def build_write_values(source_product, target_product, target, cache):
             parent_id=parent_target_id,
             cache=cache,
         )
-        if resolved_id:
-            values[target_field_name] = resolved_id
+        # Se escribe siempre: el valor resuelto o False. Dejar el campo sin tocar
+        # conservaria un valor viejo que puede ser incoherente con la compania o
+        # con la linea, y el modelo rechaza entonces cualquier escritura.
+        values[target_field_name] = resolved_id or False
 
     clothing_key = source_product.get("clothing")
     if clothing_key:
@@ -265,8 +295,7 @@ def build_write_values(source_product, target_product, target, cache):
                 target_company_id=target_company_id,
                 cache=cache,
             )
-            if resolved_id:
-                values["pharmadus_garment_id"] = resolved_id
+            values["pharmadus_garment_id"] = resolved_id or False
 
     return values
 
@@ -316,6 +345,8 @@ def run():
         "skipped_multiple_target": 0,
         "skipped_missing_match_value": 0,
         "warnings_catalog_not_found": 0,
+        "warnings_subline_without_line": 0,
+        "errors": 0,
     }
 
     for source_product in source_products:
@@ -353,10 +384,38 @@ def run():
             )
             continue
 
-        values = build_write_values(source_product, target_product, target, catalog_cache)
+        issues = []
+        values = build_write_values(
+            source_product, target_product, target, catalog_cache, issues
+        )
+
+        for issue in issues:
+            if issue["kind"] == "sublinea_sin_linea":
+                summary["warnings_subline_without_line"] += 1
+                log(
+                    "AVISO origen {}: no hay linea resuelta para la sublinea "
+                    "({}={}); se limpia la sublinea en destino.".format(
+                        format_product_label(source_product),
+                        issue["field"],
+                        issue["value"],
+                    )
+                )
+            else:
+                log(
+                    "AVISO origen {}: {} ({}={})".format(
+                        format_product_label(source_product),
+                        issue["kind"],
+                        issue["field"],
+                        issue["value"],
+                    )
+                )
+        skipped_fields = {issue["field"] for issue in issues}
 
         for source_field_name, model_info in CATALOG_MODELS.items():
             target_field_name, model = model_info
+            if source_field_name in skipped_fields:
+                # Ya se ha avisado de por que no se lleva este campo.
+                continue
             if source_product.get(source_field_name) and not values.get(target_field_name):
                 summary["warnings_catalog_not_found"] += 1
                 log(
@@ -385,8 +444,18 @@ def run():
         )
 
         if args.write:
-            target.write("product.template", [target_product["id"]], values)
-            summary["updated"] += 1
+            try:
+                target.write("product.template", [target_product["id"]], values)
+                summary["updated"] += 1
+            except xmlrpc.client.Fault as exc:
+                # Un producto problematico no puede tumbar toda la migracion.
+                summary["errors"] += 1
+                log(
+                    "ERROR destino {}: {}".format(
+                        format_product_label(target_product),
+                        exc.faultString.strip().splitlines()[-1],
+                    )
+                )
 
     log("")
     log("Resumen")
@@ -396,6 +465,8 @@ def run():
     log("skipped_multiple_target={}".format(summary["skipped_multiple_target"]))
     log("skipped_missing_match_value={}".format(summary["skipped_missing_match_value"]))
     log("warnings_catalog_not_found={}".format(summary["warnings_catalog_not_found"]))
+    log("warnings_subline_without_line={}".format(summary["warnings_subline_without_line"]))
+    log("errors={}".format(summary["errors"]))
 
 
 if __name__ == "__main__":
