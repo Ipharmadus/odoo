@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-20T06:14:57+00:00",
+  "generated_at": "2026-10-20T09:53:10+00:00",
   "repo_root": "/opt/pharmadus/odoo/custom/src/pharmadus",
   "addons": {
     "pharmadus_base": {
@@ -188,6 +188,18 @@
           "inherit": "pharmadus.catalog.mixin",
           "inherits": null,
           "description": "Product Grouping",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ProductProduct",
+          "file": "pharmadus_base/models/product_product.py",
+          "line": 6,
+          "name": null,
+          "inherit": "product.product",
+          "inherits": null,
+          "description": null,
           "transient": null,
           "field_types": [],
           "comodels": []

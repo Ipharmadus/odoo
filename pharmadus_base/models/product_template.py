@@ -83,6 +83,20 @@ class ProductTemplate(models.Model):
         string="Subagrupación",
     )
 
+    # Formato propio del nombre visible: "nombre [referencia]" en lugar de
+    # "[referencia] nombre" (addons/product/models/product_template.py).
+    @api.depends("name", "default_code")
+    def _compute_display_name(self):
+        for template in self:
+            if not template.name:
+                template.display_name = False
+                continue
+            template.display_name = (
+                "%s [%s]" % (template.name, template.default_code)
+                if template.default_code
+                else template.name
+            )
+
     @api.onchange("pharmadus_line_id")
     def _onchange_pharmadus_line_id(self):
         for record in self:

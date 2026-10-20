@@ -25,6 +25,7 @@ digraph pharmadus_addons {
   "pharmadus_base" -> "pharmadus.product.purchase.line" [label="model", color="#888888"];
   "pharmadus_base" -> "pharmadus.product.purchase.subline" [label="model", color="#888888"];
   "pharmadus_base" -> "pharmadus.product.grouping" [label="model", color="#888888"];
+  "pharmadus_base" -> "product.product" [label="model", color="#888888"];
   "pharmadus_base" -> "product.template" [label="model", color="#888888"];
   "pharmadus_base" -> "purchase.requisition" [label="model", color="#888888"];
   "pharmadus_base" -> "res.partner" [label="model", color="#888888"];

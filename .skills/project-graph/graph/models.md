@@ -1,6 +1,6 @@
 # Models
 
-Generated: `2026-10-20T06:14:57+00:00`
+Generated: `2026-10-20T09:53:10+00:00`
 
 ## pharmadus_base
 
@@ -16,6 +16,7 @@ Generated: `2026-10-20T06:14:57+00:00`
 | PharmadusProductPurchaseLine | pharmadus.product.purchase.line | pharmadus.catalog.mixin |  | pharmadus_base/models/pharmadus_product_specification.py:111 |
 | PharmadusProductPurchaseSubline | pharmadus.product.purchase.subline | pharmadus.catalog.mixin | pharmadus.product.purchase.line | pharmadus_base/models/pharmadus_product_specification.py:125 |
 | PharmadusProductGrouping | pharmadus.product.grouping | pharmadus.catalog.mixin |  | pharmadus_base/models/pharmadus_product_specification.py:159 |
+| ProductProduct |  | product.product |  | pharmadus_base/models/product_product.py:6 |
 | ProductTemplate |  | product.template | pharmadus.product.base.form, pharmadus.product.garment, pharmadus.product.grouping, pharmadus.product.line, pharmadus.product.packaging.type, pharmadus.product.purchase.line, pharmadus.product.purchase.subline, pharmadus.product.subline | pharmadus_base/models/product_template.py:7 |
 | PurchaseRequisition |  | purchase.requisition |  | pharmadus_base/models/purchase_requisition.py:6 |
 | ResPartner |  | res.partner |  | pharmadus_base/models/res_partner.py:6 |
