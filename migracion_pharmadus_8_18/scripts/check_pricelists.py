@@ -15,6 +15,10 @@ Sin `--write` solo informa. Con `--write` rellena las tarifas que falten en
 destino; con `--overwrite` ademas corrige las que sean distintas. Genera un CSV
 con las diferencias.
 
+Con `--write-defaults` alinea ademas la tarifa de respaldo (la que se aplica al
+cliente que no tiene tarifa propia) con la propiedad por defecto de Odoo 8, y
+revisa las de compra (que en Odoo 18 no tienen campo equivalente).
+
 Ojo: la tarifa se compara por NOMBRE (los ids no coinciden entre bases).
 """
 
@@ -34,6 +38,7 @@ from scripts.odoo_xmlrpc import OdooXmlRpcClient
 PAGE = 10000
 WRITE_CHUNK = 100
 PROPERTY_NAME = "property_product_pricelist"
+PROPERTY_PURCHASE = "property_product_pricelist_purchase"
 
 
 def parse_ids(raw_value):
@@ -72,6 +77,14 @@ def parse_args():
         "--overwrite",
         action="store_true",
         help="Con --write, corrige también las tarifas que sean distintas.",
+    )
+    parser.add_argument(
+        "--write-defaults",
+        action="store_true",
+        help=(
+            "Alinea la tarifa de respaldo (la que se aplica cuando el cliente no "
+            "tiene tarifa propia) con la propiedad por defecto de SIGI."
+        ),
     )
     return parser.parse_args()
 
@@ -154,6 +167,130 @@ def rules_per_pricelist(client, context=None):
         nombre = row["pricelist_id"][1] if row.get("pricelist_id") else "(sin tarifa)"
         resultado[nombre] = resultado.get(nombre, 0) + 1
     return resultado
+
+
+def target_field_exists(client, model, field_name):
+    try:
+        fields = client.execute(model, "fields_get", [field_name])
+    except xmlrpc.client.Fault:
+        return False
+    return field_name in fields
+
+
+def source_defaults(source):
+    """Tarifas de respaldo de SIGI: {propiedad: {compañía: nombre_tarifa}}.
+
+    Son las propiedades por defecto de ``ir_property`` (las que tienen ``res_id``
+    NULL): la tarifa que Odoo 8 aplica a un cliente que no tiene una propia.
+    """
+    tarifas = {
+        row["id"]: row["name"]
+        for row in iterate_records(source, "product.pricelist", [], ["name"])
+    }
+    resultado = {}
+    for row in iterate_records(
+        source,
+        "ir.property",
+        [("name", "in", [PROPERTY_NAME, PROPERTY_PURCHASE]), ("res_id", "=", False)],
+        ["name", "value_reference", "company_id"],
+    ):
+        nombre = tarifas.get(reference_id(row.get("value_reference")))
+        if not nombre:
+            continue
+        company_id = row["company_id"][0] if row.get("company_id") else None
+        resultado.setdefault(row["name"], {})[company_id] = nombre
+    return resultado
+
+
+def target_fallback(target, company_id):
+    """Tarifa que resuelve Odoo 18 cuando el cliente no tiene tarifa explícita.
+
+    El orden real de ``product.pricelist._get_partner_pricelist_multi`` es:
+    tarifa explícita, tarifa del grupo de país y, si no hay, la primera tarifa
+    activa de la compañía (sin grupos de país) por ``sequence, id, name``.
+    Aquí se reproduce ese último paso, que es el que hace de respaldo.
+    """
+    rows = target.search_read(
+        "product.pricelist",
+        [
+            ("active", "=", True),
+            ("company_id", "in", [company_id, False]),
+            ("country_group_ids", "=", False),
+        ],
+        fields=["name", "sequence"],
+        order="sequence, id, name",
+        limit=1,
+        context={"allowed_company_ids": [company_id]},
+    )
+    return rows[0] if rows else None
+
+
+def apply_defaults(source, target, companias, tarifas_destino, write):
+    """Informa (y con ``write`` alinea) las tarifas de respaldo de venta y compra."""
+    origenes = source_defaults(source)
+    ventas = origenes.get(PROPERTY_NAME, {})
+    compras = origenes.get(PROPERTY_PURCHASE, {})
+    print("--- tarifas de respaldo ---")
+    for company_id in companias:
+        esperada = ventas.get(company_id)
+        actual = target_fallback(target, company_id)
+        nombre_actual = actual["name"] if actual else None
+        if esperada == nombre_actual:
+            estado = "ok"
+        elif not esperada:
+            estado = "sin respaldo en SIGI"
+        else:
+            estado = "distinta"
+        print(
+            "  venta  compañía {}: SIGI {!r} · 18 {!r} [{}]".format(
+                company_id, esperada, nombre_actual, estado
+            )
+        )
+        if not write or estado != "distinta":
+            continue
+        destino_id = tarifas_destino.get(esperada)
+        if not destino_id:
+            print(
+                "     no se puede: la tarifa {!r} no existe en destino".format(esperada)
+            )
+            continue
+        filas = target.search_read(
+            "product.pricelist",
+            [
+                ("active", "=", True),
+                ("company_id", "in", [company_id, False]),
+                ("country_group_ids", "=", False),
+            ],
+            fields=["sequence"],
+            order="sequence, id",
+            context={"allowed_company_ids": [company_id]},
+        )
+        secuencia = min((fila["sequence"] for fila in filas), default=0) - 1
+        target.write("product.pricelist", [destino_id], {"sequence": secuencia})
+        nuevo = target_fallback(target, company_id)
+        print(
+            "     secuencia {} -> {}; ahora resuelve {!r}".format(
+                actual["sequence"] if actual else "-",
+                secuencia,
+                nuevo["name"] if nuevo else None,
+            )
+        )
+    # Compra: Odoo 8 guarda la tarifa de proveedor en la misma propiedad
+    # company-dependent, pero Odoo 18 no tiene ese campo.
+    if compras:
+        accesibles = {
+            company_id: nombre
+            for company_id, nombre in compras.items()
+            if company_id in companias
+        }
+        print("  compra: respaldo en SIGI {}".format(accesibles))
+        if target_field_exists(target, "res.partner", PROPERTY_PURCHASE):
+            print("     destino sí tiene el campo; pendiente de implementar la comparación")
+        else:
+            print(
+                "     OMITIDO: Odoo 18 no tiene property_product_pricelist_purchase "
+                "(ni campo ni respaldo); las tarifas de proveedor no se usan"
+            )
 
 
 def source_assignments(source, limit=0):
@@ -269,8 +406,7 @@ def main():
     for nombre, en_origen, en_destino in sorted(diferencias_reglas)[:10]:
         print("  {:<40} origen {:>5} / destino {:>5}".format(nombre[:40], en_origen, en_destino))
 
-    # --- asignación por cliente
-    asignaciones = source_assignments(source, limit=args.limit)
+    # --- compañías
     usuario = target.read("res.users", [target.uid], fields=["company_ids"])[0]
     propias = usuario.get("company_ids") or []
     if args.company_ids:
@@ -285,6 +421,12 @@ def main():
     else:
         companias = propias
     print("compañías a revisar: {} (las del usuario de --config)".format(companias))
+
+    # --- tarifas de respaldo (las que se aplican sin tarifa propia)
+    apply_defaults(source, target, companias, tarifas_destino, args.write_defaults)
+
+    # --- asignación por cliente
+    asignaciones = source_assignments(source, limit=args.limit)
     destino = target_assignments(target, companias, sorted(asignaciones))
     nombres_destino = {
         row["id"]: row["name"] for row in iterate_records(target, "res.partner", [], ["name"])

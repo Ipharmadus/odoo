@@ -347,8 +347,23 @@ distintas:
 
 ```bash
 python3 migracion_pharmadus_8_18/scripts/check_pricelists.py \
-  --config migracion_pharmadus_8_18/config.json --write
+  --config migracion_pharmadus_8_18/config.json --write --overwrite
 ```
+
+La tarifa de **respaldo** (la que se aplica al cliente sin tarifa propia) también
+se revisa. En Odoo 8 es la propiedad por defecto (`ir_property` con `res_id`
+NULL, una por compañía); en Odoo 18 es la primera tarifa activa de la compañía
+por `sequence, id, name` sin grupos de país. `--write-defaults` baja la secuencia
+de la tarifa de SIGI para que sea esa primera:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/check_pricelists.py \
+  --config migracion_pharmadus_8_18/config.json --write-defaults
+```
+
+Las tarifas de **compra** se informan pero no se pueden aplicar: Odoo 18 no tiene
+el campo `property_product_pricelist_purchase` (ni un respaldo equivalente), así
+que las tarifas de proveedor de SIGI no se usan en el 18.
 
 Resultado en el entorno de desarrollo: 33.060 pares cliente-compañía revisados,
 32.961 correctos, 24 sin tarifa, 18 distintas, 57 con tarifa inexistente en 18,
