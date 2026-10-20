@@ -15,6 +15,7 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/create_production_lines.py`: crea las líneas de producción de SIGI (modelo `mrp.routing` de Odoo 8) como centros de trabajo de Odoo 18, con su etiqueta.
 - `scripts/export_source_lines_map.py` y `scripts/add_production_line_operations.py`: exportan desde Odoo 8 la primera línea de cada plantilla de producto y añaden a cada BoM de Odoo 18 una operación con esa línea.
 - `scripts/normalize_lot_states.py`: traduce los estados de lote heredados de Odoo 8 (`draft`, `in_rev`, `revised`, vacío) a la selección del módulo `stock_lot_state` de Odoo 18 y bloquea los lotes rechazados.
+- `scripts/check_pricelists.py`: revisa (y opcionalmente corrige) las tarifas de venta de los clientes comparando Odoo 8 con Odoo 18.
 
 ## Requisitos
 
@@ -311,6 +312,46 @@ Se pueden limitar canales o documentos concretos con `--channel-ids`,
 `name`; las facturas usan `number` en Odoo 8 y `name` en Odoo 18; los albaranes
 se emparejan por `name`. Los registros que no cumplan una coincidencia única se
 informan y no se modifican.
+
+## Tarifas de venta
+
+`scripts/check_pricelists.py` revisa las tarifas de venta de los clientes entre
+Odoo 8 y Odoo 18 (no migra el catálogo: compara lo que hay a cada lado y, si se
+le pide, corrige las asignaciones).
+
+- **Catálogo**: tarifas por nombre a cada lado (las que sólo están en uno) y
+  número de reglas (`product.pricelist.item`) por tarifa.
+- **Clientes**: por compañía, la tarifa de `ir_property` en Odoo 8 contra el
+  campo company-dependent `specific_property_product_pricelist` de 18, que es el
+  valor explícito (`property_product_pricelist` es computado y devuelve el
+  efectivo, con la tarifa por defecto de la compañía como respaldo).
+- **Estados**: `ok`, `falta`, `distinta`, `tarifa_inexistente_en_destino`,
+  `cliente_no_existe_en_destino` y `sobra_en_destino` (tarifa puesta en 18 que no
+  viene de SIGI).
+- Descarta las propiedades de clientes borrados: `ir_property.res_id` es una
+  referencia sin clave ajena y en SIGI 57.711 de las 98.644 apuntan a clientes que
+  ya no existen.
+- Sólo revisa las compañías asignadas al usuario de `--config`.
+
+Informe (sin escribir) y CSV de diferencias:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/check_pricelists.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --csv /tmp/pricelists_diff.csv
+```
+
+Con `--write` rellena las que falten; con `--overwrite` corrige también las
+distintas:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/check_pricelists.py \
+  --config migracion_pharmadus_8_18/config.json --write
+```
+
+Resultado en el entorno de desarrollo: 33.060 pares cliente-compañía revisados,
+32.961 correctos, 24 sin tarifa, 18 distintas, 57 con tarifa inexistente en 18,
+875 puestas sólo en 18 y 2.109 clientes que no existen en desarrollo.
 
 ## Líneas de producción
 
