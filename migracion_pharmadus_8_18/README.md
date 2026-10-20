@@ -274,6 +274,11 @@ El script es idempotente: reutiliza canales con el mismo nombre, no sobrescribe
 un canal ya asignado en destino y omite coincidencias ambiguas o inexistentes.
 Sin `--write` solo muestra las operaciones previstas.
 
+Cada fase (pedidos, facturas, albaranes) se salta con un aviso si en destino el
+campo `sale_channel_id` no existe o está definido como **no almacenado**
+(`store=False`), porque en ese caso escribir en él no persiste nada. Pasa, por
+ejemplo, con los **albaranes** en `pharmadus.odootea.com`.
+
 Simulación limitada:
 
 ```bash
@@ -288,6 +293,17 @@ Escritura real, después de realizar un backup:
 python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \
   --config migracion_pharmadus_8_18/config.json \
   --write
+```
+
+En bases grandes, `--batch` hace la misma asignación en bloque: lee las claves de
+un lado y de otro por páginas y escribe por canal, en bloques de 300. Baja de una
+llamada por registro a una por bloque (en `pharmadus.odootea.com` pasó de ~11
+registros/s a minutos para 200.000 registros). Filtra por las compañías
+accesibles e informa de los bloques que fallen por permisos, sin abortar:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \
+  --config migracion_pharmadus_8_18/config.json --batch --write
 ```
 
 Se pueden limitar canales o documentos concretos con `--channel-ids`,
