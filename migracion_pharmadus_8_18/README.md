@@ -9,18 +9,21 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/migrate_product_specifications.py`: primer script para migrar los campos de la pestaña "Especificaciones" de `product.template`.
 - `scripts/migrate_product_extra_categories.py`: inspecciona las categorías extra de Odoo 8 (`categ_ids`) y muestra por pantalla las ramas bajo `NoContable`.
   Excluye `Para_Comisiones`, `Farmacia` y `Horeca`.
-- `scripts/migrate_product_expiry.py`: migra a `expiration_time` usando `alert_time` en `Materia prima` y `use_time` en el resto, reinicia `use_time` y `removal_time`, y recalcula `alert_time` según la categoría del producto.
+- `scripts/migrate_product_expiry.py`: migra `use_time` de Odoo 8 a `expiration_time` (grupo `activar`), calcula `alert_time` como un tercio de la caducidad más 60 días, reinicia `use_time` y `removal_time` y activa `use_expiration_date`. Los productos que en SIGI solo tenían alerta se dejan intactos salvo `--sugerencias todas`.
 - `scripts/migrate_user_signatures.py`: migra firmas de `res.users.signature_moved1` a `res.users.pharmadus_signature_image`.
 - `scripts/migrate_customer_valued_picking.py`: marca `res.partner.valued_picking` en todos los clientes de Odoo 18.
 - `scripts/create_production_lines.py`: crea las líneas de producción de SIGI (modelo `mrp.routing` de Odoo 8) como centros de trabajo de Odoo 18, con su etiqueta.
 - `scripts/export_source_lines_map.py` y `scripts/add_production_line_operations.py`: exportan desde Odoo 8 la primera línea de cada plantilla de producto y añaden a cada BoM de Odoo 18 una operación con esa línea.
 - `scripts/normalize_lot_states.py`: traduce los estados de lote heredados de Odoo 8 (`draft`, `in_rev`, `revised`, vacío) a la selección del módulo `stock_lot_state` de Odoo 18 y bloquea los lotes rechazados.
 - `scripts/check_pricelists.py`: revisa (y opcionalmente corrige) las tarifas de venta de los clientes comparando Odoo 8 con Odoo 18.
+- `scripts/audit_product_expiry.py`: audita las fechas de caducidad de SIGI y propone `use_expiration_date`, `expiration_time` y `alert_time` para cada plantilla, sin escribir nada.
+- `scripts/migrate_lot_sequences.py`: asigna a los productos de Odoo 18 el secuenciador de lote que tienen en Odoo 8 (`product.template.sequence_id` → `lot_sequence_id`), creando en destino las secuencias que falten.
 
 ## Requisitos
 
 - Python 3.8 o superior.
 - Acceso por XML-RPC a ambos Odoo.
+- `migrate_user_signatures.py` y `migrate_lot_sequences.py` se ejecutan dentro de `odoo shell`, no por XML-RPC.
 - El módulo con los campos de destino debe estar instalado en Odoo 18.
 
 ## Configuración
@@ -153,15 +156,24 @@ python3 migracion_pharmadus_8_18/scripts/migrate_product_specifications.py \
 
 ## Caducidad y alerta de producto
 
-`scripts/migrate_product_expiry.py` aplica estas reglas sobre `product.template`:
+`scripts/migrate_product_expiry.py` aplica el mismo criterio que la auditoría de fechas (ver
+más abajo) sobre `product.template` de Odoo 18:
 
-- Si la categoría origen contiene `Materia prima`, copia `alert_time` de Odoo 8 al campo `expiration_time` de Odoo 18.
-- Si la categoría origen no es `Materia prima`, copia `use_time` de Odoo 8 al campo `expiration_time` de Odoo 18.
-- Si la categoría del producto en Odoo 8 contiene `Materia prima`, fija `alert_time = 60` en Odoo 18.
-- Si la categoría no es `Materia prima` y `use_time` en origen es distinto de `0`, calcula `alert_time = (expiration_time // 3) + 60`.
-- Si ese cálculo sale negativo, el script lo ajusta a `0` y lo informa por pantalla.
-- Pone `use_time = 0` y `removal_time = 0` en Odoo 18 para los productos afectados por el script.
-- Activa `use_expiration_date` cuando el producto queda con `expiration_time` o `alert_time` informado.
+- **Grupo `activar`** (`use_time > 0` en Odoo 8, el único caso que se aplica por defecto):
+  `expiration_time = use_time`; `alert_time` = el de SIGI si está entre 0 y `use_time`, y si
+  no `use_time // 3 + 60`, acotado a `use_time - 1`.
+- **Grupo `revisar_solo_alerta`** (`use_time = 0` y `alert_time > 0`, 345 productos): en SIGI
+  solo avisaban, no caducaban, así que no se tocan salvo con `--sugerencias revisar_solo_alerta`
+  o `--sugerencias todas`; en ese caso `expiration_time = alert_time` y
+  `alert_time = min(60, max(1, alert_time - 1))`.
+- El resto de productos se omite: `life_time` y `removal_time` valen 0 en todas las fichas de
+  SIGI, y las fechas de sus lotes son autocumplimentadas o el marcador `2999-12-30`.
+- Pone `use_time = 0` y `removal_time = 0` en los productos que escribe, para que `use_date`,
+  `removal_date` y `expiration_date` del lote caigan en la misma fecha (SIGI manejaba una sola).
+- Activa `use_expiration_date` en todo producto escrito.
+
+El emparejamiento se resuelve precargando el destino por `--match-field` (una sola lectura) en
+lugar de una búsqueda por producto: la pasada completa tarda 2 segundos en vez de 10 minutos.
 
 Simulación sin escribir cambios:
 
@@ -178,6 +190,14 @@ python3 migracion_pharmadus_8_18/scripts/migrate_product_expiry.py \
   --write
 ```
 
+Aplicar también los que solo tienen alerta:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_product_expiry.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --sugerencias todas --write
+```
+
 Limitar volumen para pruebas:
 
 ```bash
@@ -185,6 +205,65 @@ python3 migracion_pharmadus_8_18/scripts/migrate_product_expiry.py \
   --config migracion_pharmadus_8_18/config.json \
   --limit 20
 ```
+
+## Auditoría de fechas de caducidad
+
+`scripts/audit_product_expiry.py` no escribe nada: lee SIGI, agrega las fechas de los lotes y
+genera un CSV con la propuesta de `use_expiration_date`, `expiration_time` y `alert_time`
+para cada plantilla de producto del destino.
+
+### Por qué hace falta deducirlo
+
+En Odoo 8 no existe `use_expiration_date`. `product_expiry` calcula las cuatro fechas del
+lote al crearlo a partir de los enteros `life_time`, `use_time`, `removal_time` y
+`alert_time` del producto, y las deja vacías cuando el entero vale 0. Además, el módulo
+propio `product_preferential_consumption` (`/odoo/buildout/project-addons/`) reescribe el
+default de `use_date` para redondearlo a fin de mes (`duration_type = end_month` en todas
+las fichas de SIGI) y **lo rellena siempre, aunque `use_time` sea 0**, con lo que los lotes
+de productos sin consumo preferente quedan con `use_date` = día de creación. Por eso
+`use_date` no sirve como señal; `life_date` sí, porque `life_time` vale 0 en todas las
+fichas y solo se rellena a mano (y muchos lotes llevan `2999-12-30` como "no caduca").
+
+### Criterio de la propuesta
+
+| Situación | `sugerencia` | `expiration_time` | `alert_time` |
+|---|---|---|---|
+| `use_time > 0` | `activar` | `use_time` | `alert_time` de SIGI si es menor que `use_time`; si no, `use_time // 3 + 60` |
+| `use_time = 0` y `alert_time > 0` | `revisar_solo_alerta` | `alert_time` (decisión del negocio) | `min(60, max(1, alert_time - 1))` |
+| `use_time = 0`, `alert_time = 0` y lotes con `life_date` medible | `revisar_por_lotes` | mediana de `life_date - create_date` | `expiration_time // 3 + 60` |
+| `use_time = 0`, `alert_time = 0` y `life_date` no medible (2999, igual a la creación) | `revisar_fecha_atipica` | — | — |
+| `use_time = 0`, `alert_time = 0` y `life_time` o `removal_time` > 0 | `revisar_otros_tiempos` | `life_time` o `removal_time` | `expiration_time // 3 + 60` |
+| sin días ni `life_date` | `no_activar` | — | — |
+
+El CSV incluye, por plantilla, los cuatro enteros de SIGI, `duration_type`, el recuento de
+lotes totales y con cada fecha, la `life_date` mínima y máxima, el número de lotes medidos,
+la mediana en días, la sugerencia con su motivo y el estado actual de la plantilla en el
+destino (`id`, `use_expiration_date`, `expiration_time`, `alert_time`).
+
+```bash
+cd /opt/pharmadus/odoo/custom/src/pharmadus
+python3 migracion_pharmadus_8_18/scripts/audit_product_expiry.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --csv /home/odoo/revert/expiry_audit_devel.csv
+```
+
+Opciones: `--csv`, `--limit`, `--skip-target` (no lee el destino). Tarda unos 27 segundos
+con los 39.804 lotes de SIGI.
+
+### Foto de SIGI (2026-10-21)
+
+3.940 plantillas: `life_time` y `removal_time` a 0 en todas; `use_time > 0` en 1.256;
+`alert_time > 0` y `use_time = 0` en 345; el resto (2.339) sin ningún día, y de ellas solo
+237 tienen lotes con `life_date`, que resultan ser el marcador `2999-12-30` o la fecha de
+creación. De las 500 plantillas con `life_date` tecleada, 211 están en `activar` y 52 en
+`revisar_solo_alerta`, con medianas de 666, 727, 1.092, 1.457 y 1.823 días, coherentes con
+el `use_time` de la ficha.
+
+Estado del destino en esa fecha: Comunitea no tiene ni una plantilla con
+`use_expiration_date`; devel lo tiene marcado en 2.527 de las 3.617 plantillas que
+coinciden por `default_code`, incluidas 1.235 sin ninguna fecha (pestaña «Fechas» visible
+pero vacía), y le faltan 74 que sí deberían llevarlo. Devel además no tiene 323 de las
+3.940 plantillas de SIGI (Comunitea solo 8).
 
 ## Firmas de usuario
 
@@ -198,7 +277,7 @@ Simulación sin escribir cambios:
 docker compose -f /opt/pharmadus/devel.yaml exec -T odoo \
   odoo shell -d devel --no-http <<'PY'
 import sys
-sys.path.insert(0, '/opt/odoo/custom/src/private')
+sys.path.insert(0, '/opt/odoo/custom/src/pharmadus')
 from migracion_pharmadus_8_18.scripts.migrate_user_signatures import main
 main(env, [])
 PY
@@ -210,7 +289,7 @@ Escritura real:
 docker compose -f /opt/pharmadus/devel.yaml exec -T odoo \
   odoo shell -d devel --no-http <<'PY'
 import sys
-sys.path.insert(0, '/opt/odoo/custom/src/private')
+sys.path.insert(0, '/opt/odoo/custom/src/pharmadus')
 from migracion_pharmadus_8_18.scripts.migrate_user_signatures import main
 main(env, ['--write'])
 PY
@@ -222,7 +301,7 @@ Limitar a usuarios concretos:
 docker compose -f /opt/pharmadus/devel.yaml exec -T odoo \
   odoo shell -d devel --no-http <<'PY'
 import sys
-sys.path.insert(0, '/opt/odoo/custom/src/private')
+sys.path.insert(0, '/opt/odoo/custom/src/pharmadus')
 from migracion_pharmadus_8_18.scripts.migrate_user_signatures import main
 main(env, ['--user-ids', '10,14,15'])
 PY
@@ -268,17 +347,30 @@ python3 migracion_pharmadus_8_18/scripts/migrate_customer_valued_picking.py \
 ## Canales de venta
 
 `scripts/migrate_sale_channels.py` migra los canales de `sale.channel` desde
-Odoo 8 y los asigna, cuando existe una coincidencia inequívoca por referencia,
-a pedidos, facturas y albaranes de Odoo 18.
+Odoo 8 y los asigna, cuando existe una coincidencia inequívoca por número, a
+pedidos y facturas de Odoo 18. Los **albaranes quedan fuera a propósito**: en SIGI
+no existe `stock.picking.sale_channel_id` y en Odoo 18 el campo es calculado
+(`store=False`) desde el pedido, así que no hay nada que volcar ni donde
+escribirlo.
+
+Los canales se emparejan por nombre y se leen **incluyendo los archivados**
+(`active_test: False`): en SIGI hay canales dados de baja (p. ej. `WhatsApp`) que
+siguen asignados a pedidos y facturas antiguas, y sin eso esos documentos se
+quedaban sin canal. El canal se crea en destino con el mismo estado que en SIGI,
+de modo que si allí está archivado aquí también, y nadie lo puede usar.
 
 El script es idempotente: reutiliza canales con el mismo nombre, no sobrescribe
 un canal ya asignado en destino y omite coincidencias ambiguas o inexistentes.
 Sin `--write` solo muestra las operaciones previstas.
 
-Cada fase (pedidos, facturas, albaranes) se salta con un aviso si en destino el
-campo `sale_channel_id` no existe o está definido como **no almacenado**
-(`store=False`), porque en ese caso escribir en él no persiste nada. Pasa, por
-ejemplo, con los **albaranes** en `pharmadus.odootea.com`.
+Las dos fases (pedidos, facturas) se saltan con un aviso si en destino el campo
+`sale_channel_id` no existe o es **no almacenado** (`store=False`), porque
+escribir en él no persiste nada. En `devel` hoy no hay ni siquiera el modelo
+`sale.channel`: llegará con el backup de la base de Comunitea; hasta entonces el
+script solo informa de que las fases están omitidas.
+
+Se lanza desde la máquina de desarrollo, que es la que llega a los dos servidores
+(`odoo18` no alcanza `sigi.pharmadus.com:9170` ni `10.10.1.11:9160`).
 
 Simulación limitada:
 
@@ -308,10 +400,10 @@ python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \
 ```
 
 Se pueden limitar canales o documentos concretos con `--channel-ids`,
-`--order-ids`, `--invoice-ids` y `--picking-ids`. Los pedidos se emparejan por
-`name`; las facturas usan `number` en Odoo 8 y `name` en Odoo 18; los albaranes
-se emparejan por `name`. Los registros que no cumplan una coincidencia única se
-informan y no se modifican.
+`--order-ids` y `--invoice-ids`, o quedarse solo con una fase con
+`--only orders|invoices`. Los pedidos se emparejan por `name`; las facturas
+usan `number` en Odoo 8 y `name` en Odoo 18. Los registros que no cumplan una
+coincidencia única se informan y no se modifican.
 
 ## Tarifas de venta
 
@@ -524,3 +616,54 @@ Notas:
   20 en `revised`, 3 en `in_rev` y 11 sin estado —**11.703 a normalizar**— y los 83 rechazados
   siguen sin `locked`. Los 5.381 lotes creados en Odoo 8 después del volcado (2025-10-28) no están
   en desarrollo.
+
+## Secuenciadores de lote
+
+`scripts/migrate_lot_sequences.py` replica en Odoo 18 el secuenciador de lote que cada producto tiene
+asignado en SIGI: `product.template.sequence_id` (módulo `product_lot_sequence` de Pexego, el lote se
+numera con `stock.production.lot.make_sscc`) → `product.template.lot_sequence_id` del módulo OCA
+`product_lot_sequence` de Odoo 18 (con `product_lot_sequence.policy = product`).
+
+Empareja el producto por `default_code` (sin mayúsculas ni espacios sobrantes) y la secuencia por
+nombre normalizado y, si no es inequívoco, por prefijo; si no existe, la crea con
+`code = stock.lot.serial`. Copia prefijo, sufijo, relleno, incremento e implementación, y **no toca**
+el siguiente número salvo con `--numbers source`.
+
+SIGI no es alcanzable desde `odoo18` (`sigi.pharmadus.com:9170` no responde y `10.10.1.11:9160` no
+tiene ruta), así que el origen se vuelca a CSV en la máquina de SIGI y se aplica desde aquí:
+
+```bash
+# en la máquina de SIGI
+psql -h 127.0.0.1 -p 5534 -U administrador -d odoo_pharmadus -c "\copy (
+  select t.id as tmpl_id, t.default_code, t.name as tmpl_name, t.active as tmpl_active,
+         s.id as seq_id, s.name as seq_name, s.code as seq_code, s.prefix, s.suffix,
+         s.padding, s.number_increment, s.number_next, s.implementation,
+         s.active as seq_active, s.company_id
+    from product_template t join ir_sequence s on s.id = t.sequence_id
+   order by t.id) TO '/tmp/sigi_lot_sequences.csv' WITH (FORMAT csv, HEADER)"
+
+# en odoo18: primero simulación y luego, si cuadra, con --write
+docker compose -f /opt/pharmadus/devel.yaml exec -T odoo odoo shell -d devel --no-http <<'PY'
+import sys
+sys.path.insert(0, '/opt/odoo/custom/src/pharmadus')
+from migracion_pharmadus_8_18.scripts.migrate_lot_sequences import main
+main(env, ['--source-csv', '/tmp/sigi.csv'])
+PY
+```
+
+Notas:
+
+- **Mejor con `odoo shell` que por XML-RPC**: la regla multi-compañía de `product.template` solo deja
+  ver las plantillas de las compañías del usuario, y el usuario de `config.json` tiene solo la
+  compañía 1 (5.076 de las 7.825 referencias). Con `env` (sudo) se ven las 10.117 plantillas.
+- `odoo shell` **revierte la transacción al salir**: con `--write` el script hace `commit` al final.
+- El CSV se copia al contenedor, que no monta `/tmp` del host:
+  `docker compose -f devel.yaml cp /tmp/sigi_lot_sequences.csv odoo:/tmp/sigi.csv`.
+- Las secuencias de SIGI se emparejan normalizando el nombre (allí hay dobles espacios, p. ej.
+  `LET  (LOTE ETIQUETAS)`) y, si el nombre está repetido en destino, se desempata por prefijo.
+- Estado del entorno de desarrollo (2026-10-21): 10.055 productos con secuencia en SIGI (445
+  secuencias distintas, 10.053 referencias), de los que 7.825 existen en Odoo 18 → 6.227 ya tenían la
+  secuencia correcta y 1.598 se han asignado. Quedan **2.228 productos de SIGI que todavía no existen
+  en Odoo 18** (compañías 3 y 16 y altas posteriores) y que el script informa como
+  `no existen en destino`. Después de la pasada hay 7.825 plantillas con secuencia y 454 secuencias
+  `stock.lot.serial`. Es idempotente: la segunda pasada no encuentra nada que hacer.

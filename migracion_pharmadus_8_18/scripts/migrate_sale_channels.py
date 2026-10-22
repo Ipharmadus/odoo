@@ -32,7 +32,12 @@ def parse_args():
     parser.add_argument("--channel-ids", default="")
     parser.add_argument("--order-ids", default="")
     parser.add_argument("--invoice-ids", default="")
-    parser.add_argument("--picking-ids", default="")
+    parser.add_argument(
+        "--only",
+        choices=("both", "orders", "invoices"),
+        default="both",
+        help="Limita el trabajo a pedidos o a facturas (por defecto, los dos).",
+    )
     parser.add_argument(
         "--batch",
         action="store_true",
@@ -72,8 +77,11 @@ def fault_message(exc):
     return exc.faultString.strip().splitlines()[-1] if exc.faultString else str(exc)
 
 
-def unique_record(client, model, domain, fields):
-    records = client.search_read(model, domain, fields=fields, limit=2)
+def unique_record(client, model, domain, fields, context=None):
+    kwargs = {"fields": fields, "limit": 2}
+    if context:
+        kwargs["context"] = context
+    records = client.search_read(model, domain, **kwargs)
     if len(records) != 1:
         return None, "not_found" if not records else "ambiguous"
     return records[0], None
@@ -96,13 +104,21 @@ def target_field_is_stored(client, model, field_name):
 def migrate_channels(source, target, write, channel_ids=None):
     channel_map = {}
     domain = [("id", "in", channel_ids)] if channel_ids else []
+    # active_test=False: en SIGI hay canales archivados (p. ej. WhatsApp) que sí
+    # estan asignados a pedidos y facturas antiguas. Sin esto no se ven y esos
+    # documentos se quedan sin canal.
+    context = {"active_test": False}
     source_channels = source.search_read(
-        "sale.channel", domain, fields=["name", "active"]
+        "sale.channel", domain, fields=["name", "active"], context=context
     )
     for source_channel in source_channels:
         name = source_channel["name"]
         target_channel, error = unique_record(
-            target, "sale.channel", [("name", "=", name)], ["name", "active"]
+            target,
+            "sale.channel",
+            [("name", "=", name)],
+            ["name", "active"],
+            context=context,
         )
         if error == "ambiguous":
             print("CHANNEL ambiguous: {}".format(name))
@@ -123,7 +139,17 @@ def migrate_channels(source, target, write, channel_ids=None):
                 {"name": name, "active": source_channel["active"]},
             )
             channel_map[source_channel["id"]] = target_id
-        print("CHANNEL {} {}".format("created" if write else "would create", name))
+        else:
+            # En simulacion el canal aun no existe: se marca para que los
+            # documentos aparezcan como "se escribirian" y no como no mapeados.
+            channel_map[source_channel["id"]] = "nuevo:{}".format(name)
+        print(
+            "CHANNEL {} {}{}".format(
+                "created" if write else "would create",
+                name,
+                "" if source_channel["active"] else " (inactivo, como en SIGI)",
+            )
+        )
     return channel_map
 
 
@@ -288,15 +314,20 @@ def main():
             for channel in target.search_read("sale.channel", [], fields=["name"])
         }
 
+    # Albaranes: fuera a proposito. En SIGI no existe stock.picking.sale_channel_id
+    # y en Odoo 18 el campo es calculado (store=False) desde el pedido, asi que no
+    # hay nada que volcar ni donde escribirlo.
     fases = (
         ("pedidos", "sale.order", ["name", "sale_channel_id"],
          "sale.order", "name", parse_ids(args.order_ids), []),
         ("facturas", "account.invoice", ["number", "sale_channel_id"],
          "account.move", "name", parse_ids(args.invoice_ids),
          [("move_type", "in", ["out_invoice", "out_refund"])]),
-        ("albaranes", "stock.picking", ["name", "sale_channel_id"],
-         "stock.picking", "name", parse_ids(args.picking_ids), []),
     )
+    if args.only == "orders":
+        fases = fases[:1]
+    elif args.only == "invoices":
+        fases = fases[1:]
     for etiqueta, model, source_fields, target_model, key_field, ids, target_domain in fases:
         # Si en destino el campo no es almacenado (o no existe), la fase no
         # puede persistir nada: se omite con un aviso en vez de recorrerla.

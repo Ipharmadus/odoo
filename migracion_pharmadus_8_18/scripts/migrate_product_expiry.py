@@ -1,5 +1,25 @@
 #!/usr/bin/env python3
 
+"""Migra la configuracion de caducidad/alerta de producto desde Odoo 8 a Odoo 18.
+
+Aplica el mismo criterio que `scripts/audit_product_expiry.py` (ver README,
+seccion "Auditoria de fechas de caducidad"):
+
+- `use_time > 0` (grupo `activar`): `expiration_time = use_time` y
+  `alert_time` = el de SIGI cuando esta entre 0 y `use_time`; si no,
+  `use_time // 3 + 60` acotado a `use_time - 1`.
+- `use_time = 0` y `alert_time > 0` (grupo `revisar_solo_alerta`): SIGI solo
+  avisaba, no caducaba, asi que no se toca salvo que se pida expresamente.
+  Cuando se pide: `expiration_time = alert_time` y
+  `alert_time = min(60, max(1, alert_time - 1))`.
+- Resto: se omite.
+
+En los productos que se escriben, `use_time` y `removal_time` se ponen a 0 para
+que `use_date`, `removal_date` y `expiration_date` del lote caigan en la misma
+fecha, que es como funcionaba SIGI: una sola fecha de consumo preferente.
+`use_expiration_date` queda activo.
+"""
+
 import argparse
 import json
 import os
@@ -13,9 +33,21 @@ if PARENT_DIR not in sys.path:
 from scripts.odoo_xmlrpc import OdooXmlRpcClient
 
 
-RAW_MATERIAL_LABEL = "materia prima"
-RAW_MATERIAL_ALERT_DAYS = 60
-SOURCE_FIELDS = ["name", "default_code", "alert_time", "use_time", "categ_id"]
+GRUPO_ACTIVAR = "activar"
+GRUPO_SOLO_ALERTA = "revisar_solo_alerta"
+GRUPOS_VALIDOS = (GRUPO_ACTIVAR, GRUPO_SOLO_ALERTA)
+GRUPOS_POR_DEFECTO = GRUPO_ACTIVAR
+ALERTA_POR_DEFECTO = 60
+
+SOURCE_FIELDS = [
+    "name",
+    "default_code",
+    "categ_id",
+    "life_time",
+    "use_time",
+    "removal_time",
+    "alert_time",
+]
 TARGET_MATCH_FIELDS = [
     "name",
     "default_code",
@@ -28,11 +60,15 @@ TARGET_MATCH_FIELDS = [
 ]
 
 
+def log(message):
+    print(message)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
             "Migra la configuracion de caducidad/alerta de producto desde Odoo 8 "
-            "hacia Odoo 18."
+            "hacia Odoo 18 con el criterio de la auditoria de fechas."
         )
     )
     parser.add_argument(
@@ -63,6 +99,14 @@ def parse_args():
         help="IDs de product.template del origen, separados por comas, para migrar solo esos productos.",
     )
     parser.add_argument(
+        "--sugerencias",
+        default=GRUPOS_POR_DEFECTO,
+        help=(
+            "Grupos de la auditoría que se aplican, separados por comas: "
+            "'activar' (por defecto), 'revisar_solo_alerta' o 'todas'."
+        ),
+    )
+    parser.add_argument(
         "--write",
         action="store_true",
         help="Escribe cambios en Odoo 18. Sin este parámetro, el script se ejecuta en modo simulación.",
@@ -81,34 +125,43 @@ def parse_id_list(raw_value):
     return [int(part.strip()) for part in raw_value.split(",") if part.strip()]
 
 
-def log(message):
-    print(message)
+def parse_grupos(raw_value):
+    grupos = set()
+    for part in (raw_value or "").split(","):
+        value = part.strip().lower()
+        if not value:
+            continue
+        if value in ("todas", "todos", "all"):
+            grupos.update(GRUPOS_VALIDOS)
+        elif value in GRUPOS_VALIDOS:
+            grupos.add(value)
+        else:
+            raise SystemExit(
+                "Grupo no soportado: {}. Valores válidos: {} o 'todas'.".format(
+                    value, ", ".join(GRUPOS_VALIDOS)
+                )
+            )
+    if not grupos:
+        grupos.add(GRUPO_ACTIVAR)
+    return grupos
+
+
+def to_int(value):
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def m2o_id(value):
-    if not value:
-        return None
     if isinstance(value, (list, tuple)) and value:
         return value[0]
     return None
 
 
 def normalize_positive_int(value):
-    if value in (None, False, ""):
-        return None
-    try:
-        normalized = int(round(float(value)))
-    except (TypeError, ValueError):
-        return None
-    if normalized <= 0:
-        return None
-    return normalized
-
-
-def build_source_domain(product_ids):
-    if product_ids:
-        return [("id", "in", product_ids)]
-    return []
+    normalized = to_int(value)
+    return normalized if normalized > 0 else None
 
 
 def format_product_label(product):
@@ -117,6 +170,12 @@ def format_product_label(product):
         product.get("name") or "-",
         product.get("default_code") or "sin default_code",
     )
+
+
+def build_source_domain(product_ids):
+    if product_ids:
+        return [("id", "in", product_ids)]
+    return []
 
 
 def find_target_product(target, match_field, source_product):
@@ -136,72 +195,82 @@ def find_target_product(target, match_field, source_product):
     return records[0], None
 
 
-def read_source_category(source, category_id, cache):
-    if not category_id:
-        return None
-    if category_id not in cache:
-        records = source.read(
-            "product.category",
-            [category_id],
-            fields=["name", "complete_name"],
+def load_target_index(target, match_field):
+    """Precarga el destino para no hacer una búsqueda por producto (10 veces más rápido)."""
+    index = {}
+    offset = 0
+    page = 5000
+    while True:
+        records = target.search_read(
+            "product.template",
+            [],
+            fields=list(dict.fromkeys(TARGET_MATCH_FIELDS + [match_field])),
+            limit=page,
+            offset=offset,
+            order="id",
         )
-        cache[category_id] = records[0] if records else None
-    return cache[category_id]
+        if not records:
+            break
+        for record in records:
+            value = record.get(match_field)
+            if not value:
+                continue
+            index.setdefault(value, []).append(record)
+        offset += len(records)
+        if len(records) < page:
+            break
+    return index
 
 
-def is_raw_material_category(category):
-    if not category:
-        return False
-    complete_name = (category.get("complete_name") or category.get("name") or "").lower()
-    return RAW_MATERIAL_LABEL in complete_name
+def pick_target(index, match_field, source_product):
+    match_value = source_product.get(match_field)
+    if not match_value:
+        return None, "missing_match_value"
+    records = index.get(match_value) or []
+    if not records:
+        return None, "not_found"
+    if len(records) > 1:
+        return None, "multiple_found"
+    return records[0], None
 
 
-def compute_target_alert_days(is_raw_material, expiration_days):
-    if is_raw_material:
-        return RAW_MATERIAL_ALERT_DAYS, False
-    if expiration_days is None:
-        return None, False
-    computed_days = (expiration_days // 3) + RAW_MATERIAL_ALERT_DAYS
-    if computed_days < 0:
-        return 0, True
-    return computed_days, False
+def default_alert(expiration_days):
+    """Misma fórmula que la auditoría: un tercio de la caducidad más 60 días."""
+    if expiration_days <= 0:
+        return 0
+    computed = (expiration_days // 3) + ALERTA_POR_DEFECTO
+    return min(computed, max(1, expiration_days - 1))
 
 
-def build_write_values(source_product, source_category, summary):
-    raw_material = is_raw_material_category(source_category)
-    source_expiration_field = "alert_time" if raw_material else "use_time"
-    expiration_days = normalize_positive_int(source_product.get(source_expiration_field))
-    alert_days, clamped = compute_target_alert_days(raw_material, expiration_days)
+def clasificar(source_product):
+    """Devuelve (grupo, expiration_time, alert_time) o (None, None, None)."""
+    use_time = to_int(source_product.get("use_time"))
+    alert_time = to_int(source_product.get("alert_time"))
 
-    if raw_material:
-        summary["raw_material_products"] += 1
-    elif expiration_days is not None:
-        summary["computed_alert_products"] += 1
-    else:
-        summary["products_without_source_expiration"] += 1
+    if use_time > 0:
+        alert = alert_time if 0 < alert_time < use_time else default_alert(use_time)
+        return GRUPO_ACTIVAR, use_time, alert
 
-    if clamped:
-        summary["warnings_clamped_alert"] += 1
+    if alert_time > 0:
+        alert = min(ALERTA_POR_DEFECTO, max(1, alert_time - 1))
+        return GRUPO_SOLO_ALERTA, alert_time, alert
 
-    values = {
+    return None, None, None
+
+
+def build_write_values(expiration_days, alert_days):
+    return {
         "expiration_time": expiration_days or False,
+        "alert_time": alert_days or False,
         "use_time": 0,
         "removal_time": 0,
-        "alert_time": alert_days if alert_days is not None else False,
-        "use_expiration_date": bool(expiration_days or alert_days),
+        "use_expiration_date": True,
     }
-    return (
-        values,
-        expiration_days,
-        alert_days,
-        raw_material,
-        clamped,
-        source_expiration_field,
-    )
 
 
 def run():
     args = parse_args()
+    grupos = parse_grupos(args.sugerencias)
     config = load_config(args.config)
     source = OdooXmlRpcClient(**config["source"])
     target = OdooXmlRpcClient(**config["target"])
@@ -224,27 +293,55 @@ def run():
     )
 
     log(
-        "Se han encontrado {} productos de origen. Modo: {}.".format(
-            len(source_products), "escritura" if args.write else "simulación"
+        "Se han encontrado {} productos de origen. Grupos: {}. Modo: {}.".format(
+            len(source_products),
+            ", ".join(sorted(grupos)),
+            "escritura" if args.write else "simulación",
         )
     )
 
-    category_cache = {}
+    log("Precargando plantillas del destino...")
+    target_index = load_target_index(target, args.match_field) if args.match_field != "id" else None
+    log("  {} valores de '{}' indexados".format(len(target_index or {}), args.match_field))
+
     summary = {
         "processed": 0,
         "updated": 0,
+        "skipped_grupo_no_pedido": 0,
+        "skipped_sin_regla": 0,
         "skipped_missing_target": 0,
         "skipped_multiple_target": 0,
         "skipped_missing_match_value": 0,
-        "raw_material_products": 0,
-        "computed_alert_products": 0,
-        "products_without_source_expiration": 0,
-        "warnings_clamped_alert": 0,
+        "activar": 0,
+        "revisar_solo_alerta": 0,
+        "errors": 0,
+        "alertas_recalculadas": 0,
+        "alertas_acotadas": 0,
     }
 
     for source_product in source_products:
         summary["processed"] += 1
-        target_product, error_code = find_target_product(target, args.match_field, source_product)
+        grupo, expiration_days, alert_days = clasificar(source_product)
+
+        if grupo is None:
+            summary["skipped_sin_regla"] += 1
+            continue
+
+        if grupo not in grupos:
+            summary["skipped_grupo_no_pedido"] += 1
+            continue
+
+        summary[grupo] += 1
+        alert_origen = to_int(source_product.get("alert_time"))
+        if grupo == GRUPO_ACTIVAR and alert_days != alert_origen:
+            summary["alertas_recalculadas"] += 1
+            if alert_origen >= expiration_days:
+                summary["alertas_acotadas"] += 1
+
+        if target_index is not None:
+            target_product, error_code = pick_target(target_index, args.match_field, source_product)
+        else:
+            target_product, error_code = find_target_product(target, args.match_field, source_product)
 
         if error_code == "missing_match_value":
             summary["skipped_missing_match_value"] += 1
@@ -277,42 +374,34 @@ def run():
             )
             continue
 
-        source_category = read_source_category(
-            source,
-            m2o_id(source_product.get("categ_id")),
-            category_cache,
-        )
-        (
-            values,
-            expiration_days,
-            alert_days,
-            raw_material,
-            clamped,
-            source_expiration_field,
-        ) = build_write_values(source_product, source_category, summary)
-
-        if clamped:
-            log(
-                "AVISO origen {}: la fecha de alerta calculada era negativa y se ajusta a 0.".format(
-                    format_product_label(source_product)
-                )
-            )
+        values = build_write_values(expiration_days, alert_days)
 
         log(
-            "SINCRONIZAR origen {} -> destino {} | categoria_origen={} | campo_origen_expiration={} | expiration_time={} | alert_time={} | use_expiration_date={}{}".format(
+            "SINCRONIZAR origen {} -> destino {} | grupo={} | use_time_origen={} | alert_time_origen={} "
+            "| expiration_time={} | alert_time={} | use_expiration_date={}".format(
                 format_product_label(source_product),
                 format_product_label(target_product),
-                repr(source_category.get("complete_name") if source_category else False),
-                source_expiration_field,
+                grupo,
+                to_int(source_product.get("use_time")),
+                alert_origen,
                 expiration_days,
                 alert_days,
                 values["use_expiration_date"],
-                " | regla=Materia prima" if raw_material else " | regla=1/3 caducidad + 60",
             )
         )
 
         if args.write:
-            target.write("product.template", [target_product["id"]], values)
+            try:
+                target.write("product.template", [target_product["id"]], values)
+            except Exception as error:  # noqa: BLE001 - un fallo no debe abortar la pasada
+                summary["errors"] += 1
+                log(
+                    "ERROR destino {}: {}".format(
+                        format_product_label(target_product),
+                        str(error).splitlines()[0] if str(error) else error,
+                    )
+                )
+                continue
             summary["updated"] += 1
 
     log("")

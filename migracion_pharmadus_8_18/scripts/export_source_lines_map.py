@@ -8,7 +8,7 @@ plantilla de producto declaraba sus lineas validas en
 producto, la PRIMERA de esas lineas, ordenando los **codigos alfabeticamente**
 (``--order code``, por defecto) o por id de ``mrp.routing`` (``--order id``).
 
-El JSON resultante lo consume ''assign_production_lines_to_boms.py'' en el
+El JSON resultante lo consume ''add_production_line_operations.py'' en el
 entorno de Odoo 18. Se hace en dos fases porque no suele haber conectividad
 simultanea a los dos Odoo.
 
