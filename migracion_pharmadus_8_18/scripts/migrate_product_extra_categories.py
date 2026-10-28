@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 
+"""Pasa las categorias extra de Odoo 8 (``categ_ids``) a etiquetas de producto.
+
+Se queda con las ramas que cuelgan de ``NoContable`` y excluye ``NoContable``,
+``Departamento``, ``Para_Comisiones``, ``Farmacia`` y ``Horeca``. La etiqueta es
+el **nombre hoja** de la categoria.
+
+Rendimiento: el destino se precarga por el campo de emparejamiento (una lectura
+en lugar de una busqueda por producto) y las escrituras se agrupan por conjunto
+de etiquetas, en bloques de 300. Con miles de productos y un destino remoto, una
+llamada por producto tardaba horas.
+
+Es idempotente en el sentido de que suma etiquetas (``(6, 0, ids)``) sin
+duplicarlas; volver a ejecutarlo no cambia nada si ya estaban puestas.
+"""
+
 import argparse
 import json
 import os
@@ -14,7 +29,7 @@ from scripts.odoo_xmlrpc import OdooXmlRpcClient
 
 
 SOURCE_FIELDS = ["name", "default_code", "categ_ids"]
-TARGET_MATCH_FIELDS = ["name", "default_code", "product_tag_ids"]
+TARGET_FIELDS = ["id", "name", "default_code", "product_tag_ids"]
 SOURCE_CATEGORY_PREFIX = "NoContable"
 EXCLUDED_CATEGORY_NAMES = {
     "NoContable",
@@ -23,19 +38,21 @@ EXCLUDED_CATEGORY_NAMES = {
     "Farmacia",
     "Horeca",
 }
+PAGE = 2000
+WRITE_CHUNK = 300
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description=(
-            "Inspecciona las categorías extra de producto en Odoo 8 "
-            "y muestra las ramas que cuelgan de 'NoContable'."
+            "Inspecciona las categorias extra de producto en Odoo 8 y las lleva "
+            "a etiquetas (product.tag) del producto en Odoo 18."
         )
     )
     parser.add_argument(
         "--config",
         required=True,
-        help="Ruta al fichero JSON de configuración con credenciales de origen y destino.",
+        help="Ruta al fichero JSON de configuracion con credenciales de origen y destino.",
     )
     parser.add_argument(
         "--match-field",
@@ -46,13 +63,13 @@ def parse_args():
         "--limit",
         type=int,
         default=0,
-        help="Límite opcional de productos de origen a procesar.",
+        help="Limite opcional de productos de origen a procesar.",
     )
     parser.add_argument(
         "--offset",
         type=int,
         default=0,
-        help="Desplazamiento para la búsqueda de productos de origen.",
+        help="Desplazamiento para la busqueda de productos de origen.",
     )
     parser.add_argument(
         "--product-ids",
@@ -62,7 +79,7 @@ def parse_args():
     parser.add_argument(
         "--write",
         action="store_true",
-        help="Escribe cambios en Odoo 18. Sin este parámetro, el script se ejecuta en modo simulación.",
+        help="Escribe cambios en Odoo 18. Sin este parametro, el script se ejecuta en modo simulacion.",
     )
     return parser.parse_args()
 
@@ -75,17 +92,30 @@ def load_config(path):
 def parse_id_list(raw_value):
     if not raw_value:
         return []
-    result = []
-    for part in raw_value.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        result.append(int(part))
-    return result
+    return [int(part.strip()) for part in raw_value.split(",") if part.strip()]
 
 
 def log(message):
-    print(message)
+    print(message, flush=True)
+
+
+def read_all(client, model, fields, domain=None):
+    records, offset = [], 0
+    while True:
+        batch = client.search_read(
+            model, domain or [], fields=fields, limit=PAGE, offset=offset, order="id"
+        )
+        if not batch:
+            return records
+        records.extend(batch)
+        offset += len(batch)
+        if len(batch) < PAGE:
+            return records
+
+
+def chunks(items, size):
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
 
 
 def build_source_domain(product_ids):
@@ -103,16 +133,22 @@ def format_product_label(product):
     )
 
 
-def find_target_product(target, match_field, source_product):
+def load_target_index(target, match_field):
+    """valor del campo de emparejamiento -> lista de plantillas destino."""
+    index = {}
+    for record in read_all(target, "product.template", TARGET_FIELDS):
+        value = record.get(match_field)
+        if not value:
+            continue
+        index.setdefault(value, []).append(record)
+    return index
+
+
+def pick_target(index, match_field, source_product):
     match_value = source_product.get(match_field)
     if not match_value:
         return None, "missing_match_value"
-
-    records = target.search_read(
-        "product.template",
-        [(match_field, "=", match_value)],
-        fields=TARGET_MATCH_FIELDS,
-    )
+    records = index.get(match_value) or []
     if not records:
         return None, "not_found"
     if len(records) > 1:
@@ -146,21 +182,23 @@ def filter_extra_categories(categories):
     return filtered
 
 
-def ensure_target_tags(target, tag_names, cache):
-    tag_ids = []
-    for tag_name in tag_names:
-        if tag_name in cache:
-            tag_ids.append(cache[tag_name])
-            continue
+def load_target_tags(target):
+    return {row["name"]: row["id"] for row in read_all(target, "product.tag", ["name"])}
 
-        records = target.search_read("product.tag", [("name", "=", tag_name)], fields=["name"])
-        if records:
-            tag_id = records[0]["id"]
-        else:
-            tag_id = target.execute("product.tag", "create", {"name": tag_name})
-        cache[tag_name] = tag_id
-        tag_ids.append(tag_id)
-    return tag_ids
+
+def ensure_target_tag(target, tag_name, cache, write):
+    """ID de la etiqueta, creandola si falta (solo en modo escritura)."""
+    if tag_name in cache:
+        return cache[tag_name]
+    records = target.search_read("product.tag", [("name", "=", tag_name)], fields=["name"])
+    if records:
+        cache[tag_name] = records[0]["id"]
+        return cache[tag_name]
+    if not write:
+        return None
+    tag_id = target.execute("product.tag", "create", {"name": tag_name})
+    cache[tag_name] = tag_id
+    return tag_id
 
 
 def run():
@@ -193,8 +231,14 @@ def run():
         )
     )
 
+    log("Precargando plantillas del destino...")
+    target_index = load_target_index(target, args.match_field)
+    log("  {} valores de '{}' indexados".format(len(target_index), args.match_field))
+    log("Precargando etiquetas del destino...")
+    tag_cache = load_target_tags(target)
+    log("  {} etiquetas".format(len(tag_cache)))
+
     category_cache = {}
-    tag_cache = {}
     summary = {
         "processed": 0,
         "updated": 0,
@@ -202,11 +246,13 @@ def run():
         "skipped_missing_target": 0,
         "skipped_multiple_target": 0,
         "skipped_missing_match_value": 0,
+        "created_tags": 0,
     }
+    pending = {}
 
     for source_product in source_products:
         summary["processed"] += 1
-        target_product, error_code = find_target_product(target, args.match_field, source_product)
+        target_product, error_code = pick_target(target_index, args.match_field, source_product)
 
         if error_code == "missing_match_value":
             summary["skipped_missing_match_value"] += 1
@@ -248,9 +294,18 @@ def run():
         category_paths = [cat["complete_name"] for cat in extra_categories]
         category_leaf_names = [cat["name"] for cat in extra_categories]
 
-        target_tag_ids = ensure_target_tags(target, category_leaf_names, tag_cache)
+        before = len(tag_cache)
+        target_tag_ids = [
+            tag_id
+            for tag_id in (
+                ensure_target_tag(target, name, tag_cache, args.write)
+                for name in category_leaf_names
+            )
+            if tag_id
+        ]
+        summary["created_tags"] += len(tag_cache) - before
         existing_tag_ids = target_product.get("product_tag_ids") or []
-        final_tag_ids = sorted(set(existing_tag_ids + target_tag_ids))
+        final_tag_ids = tuple(sorted(set(existing_tag_ids + target_tag_ids)))
 
         log(
             "CATEGORÍAS EXTRA origen {} -> destino {} | rutas={} | etiquetas_sugeridas={} | tag_ids_destino={}".format(
@@ -258,23 +313,32 @@ def run():
                 format_product_label(target_product),
                 category_paths,
                 category_leaf_names,
-                final_tag_ids,
+                list(final_tag_ids),
             )
         )
 
-        if args.write:
-            target.write(
-                "product.template",
-                [target_product["id"]],
-                {"product_tag_ids": [(6, 0, final_tag_ids)]},
-            )
-            summary["updated"] += 1
+        if args.write and final_tag_ids:
+            pending.setdefault(final_tag_ids, []).append(target_product["id"])
+
+    if args.write:
+        for tag_ids, ids in pending.items():
+            for block in chunks(ids, WRITE_CHUNK):
+                target.write(
+                    "product.template",
+                    block,
+                    {"product_tag_ids": [(6, 0, list(tag_ids))]},
+                )
+            summary["updated"] += len(ids)
+        log("")
+        log("Escrito: {} productos en {} grupos de etiquetas".format(
+            summary["updated"], len(pending)))
 
     log("")
     log("Resumen")
     log("processed={}".format(summary["processed"]))
     log("updated={}".format(summary["updated"]))
     log("with_nocontable_categories={}".format(summary["with_nocontable_categories"]))
+    log("created_tags={}".format(summary["created_tags"]))
     log("skipped_missing_target={}".format(summary["skipped_missing_target"]))
     log("skipped_multiple_target={}".format(summary["skipped_multiple_target"]))
     log("skipped_missing_match_value={}".format(summary["skipped_missing_match_value"]))
