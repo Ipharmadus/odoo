@@ -700,6 +700,10 @@ Qué corrige:
     Es lo recomendable en un entorno neutralizado.
   **Ojo**: en el volcado de Comunitea hay 38 activos de estos y muchos son automatizaciones que
   salen al exterior (marketplaces, PrestaShop); repararlos las reactiva, desactivarlos no.
+- **Automatizaciones con código heredado**: las que cuelgan de una acción (o de una acción hija) que
+  usa `object` o `cr.`, globals de Odoo 8 que ya no existen y que abortan la escritura que las
+  dispara (p. ej. al marcar `is_outdated_bom` en una orden de fabricación).
+  `--deactivate-legacy-automations` las desactiva; sin ese modificador solo se listan.
 
 Simulación (no escribe):
 

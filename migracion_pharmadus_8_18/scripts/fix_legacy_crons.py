@@ -39,6 +39,13 @@ Tareas, todas idempotentes y sin efecto sin ``--write``:
    son automatizaciones hacia marketplaces o PrestaShop. Sin ninguno de los dos
    modificadores solo se listan.
 
+6. **Automatizaciones con codigo heredado**: las que cuelgan de una accion (o de
+   una accion hija) que usa ``object`` o ``cr.``, globals que ya no existen en
+   Odoo 18 y que abortan la operacion que las dispara (por ejemplo, al escribir
+   ``is_outdated_bom`` en una orden de fabricacion). Con
+   ``--deactivate-legacy-automations`` se desactivan; sin ese modificador solo se
+   listan.
+
 Con ``--write`` se escribe un JSON de reversion con los valores anteriores y los
 registros eliminados (nombre, accion y codigo) para poder recrearlos a mano.
 """
@@ -80,6 +87,7 @@ CRON_FIELDS = [
 ACTION_FIELDS = ["id", "name", "code", "model_id", "state"]
 STALE_METHOD = "requeue_stuck_jobs"
 LEGACY_API_PATTERN = re.compile(r"^\s*model\.run\(\s*\[\s*(\d+)\s*\]\s*,?\s*\)\s*$")
+LEGACY_AUTOMATION_PATTERN = re.compile(r"\bcr\.|\bobject\b")
 PAGE = 500
 
 
@@ -123,6 +131,15 @@ def parse_args(argv=None):
             "Desactiva los crones con API antigua (active=False) en vez de "
             "repararlos. Recomendado en un entorno neutralizado: dejan de fallar "
             "sin reactivar automatizaciones que salen al exterior."
+        ),
+    )
+    parser.add_argument(
+        "--deactivate-legacy-automations",
+        action="store_true",
+        help=(
+            "Desactiva las automatizaciones cuya accion usa 'object' o 'cr.', "
+            "globals de Odoo 8 que ya no existen y que abortan la escritura que "
+            "las dispara."
         ),
     )
     parser.add_argument(
@@ -497,6 +514,91 @@ def task_cron_names(client, write, revert, skip_ids):
     return changes
 
 
+def task_legacy_automations(client, write, enabled, revert):
+    """Desactiva automatizaciones cuya accion (o accion hija) usa API antigua."""
+    log("\n--- 6. automatizaciones con codigo heredado ---")
+    automations = read_all(
+        client, "base.automation", ["id", "name", "active", "action_server_ids"]
+    )
+    if not automations:
+        log("  nada que hacer: no hay automatizaciones")
+        return 0
+
+    action_ids = set()
+    for automation in automations:
+        action_ids.update(automation.get("action_server_ids") or [])
+    actions = {
+        action["id"]: action
+        for action in read_records(
+            client, "ir.actions.server", action_ids, ["id", "name", "code", "child_ids"]
+        )
+    }
+    children_ids = set()
+    for action in actions.values():
+        children_ids.update(action.get("child_ids") or [])
+    children = {
+        action["id"]: action
+        for action in read_records(
+            client,
+            "ir.actions.server",
+            children_ids - set(actions),
+            ["id", "name", "code"],
+        )
+    }
+
+    legacy = []
+    for automation in automations:
+        codes = []
+        for action_id in automation.get("action_server_ids") or []:
+            action = actions.get(action_id)
+            if not action:
+                continue
+            codes.append(action.get("code") or "")
+            for child_id in action.get("child_ids") or []:
+                child = children.get(child_id)
+                if child:
+                    codes.append(child.get("code") or "")
+        if not codes:
+            continue
+        if any(LEGACY_AUTOMATION_PATTERN.search(code) for code in codes):
+            legacy.append(automation)
+
+    if not legacy:
+        log("  nada que hacer: no hay automatizaciones con API antigua")
+        return 0
+    if not enabled:
+        log(
+            "  {} automatizaciones con API antigua (no se tocan sin "
+            "--deactivate-legacy-automations):".format(len(legacy))
+        )
+        for automation in legacy[:20]:
+            log("    automatizacion {} {!r}".format(automation["id"], automation["name"]))
+        return 0
+
+    changed = 0
+    for automation in legacy:
+        if not automation.get("active"):
+            continue
+        log(
+            "  {:<11} automatizacion {} {!r}".format(
+                "DESACTIVAR" if write else "DESACTIVARIA",
+                automation["id"],
+                automation["name"],
+            )
+        )
+        revert["deactivated_automations"].append(
+            {
+                "automation_id": automation["id"],
+                "name": automation["name"],
+                "before_active": True,
+            }
+        )
+        changed += 1
+        if write:
+            client.write("base.automation", [automation["id"]], {"active": False})
+    return changed
+
+
 def write_revert(path, payload):
     directory = os.path.dirname(os.path.abspath(path))
     if directory and not os.path.isdir(directory):
@@ -529,6 +631,7 @@ def run(argv=None):
         "deleted_crons": [],
         "code_repairs": [],
         "deactivated_crons": [],
+        "deactivated_automations": [],
         "workflow_updates": [],
         "cron_name_updates": [],
     }
@@ -548,6 +651,9 @@ def run(argv=None):
     legacy = task_legacy_api_crons(target, args.write, mode, revert, skip_ids)
     filters = task_workflow_filters(target, args.write, revert)
     names = task_cron_names(target, args.write, revert, skip_ids)
+    automations = task_legacy_automations(
+        target, args.write, args.deactivate_legacy_automations, revert
+    )
 
     log("\nResumen")
     verb_delete = "eliminados" if args.write else "a eliminar"
@@ -562,8 +668,13 @@ def run(argv=None):
     log("  crones con API antigua {}: {}".format(verb_legacy, legacy))
     log("  filtros de workflow {}: {}".format(verb_fill, filters))
     log("  nombres de cron {}: {}".format(verb_name, names))
+    log(
+        "  automatizaciones heredadas {}: {}".format(
+            "desactivadas" if args.write else "a desactivar", automations
+        )
+    )
 
-    if args.write and (removed or legacy or filters or names):
+    if args.write and (removed or legacy or filters or names or automations):
         path = args.revert_out or "crons_revert_{}.json".format(
             datetime.now().strftime("%Y%m%d-%H%M")
         )
