@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+"""Marca res.partner.valued_picking en los clientes de Odoo 18.
+
+Trabaja solo contra el destino (``target`` del config): no necesita leer Odoo 8.
+
+Escribe por **lotes** (no una llamada por cliente): con decenas de miles de
+clientes, una escritura individual tardaria horas. La simulacion informa igual
+por lotes. Es idempotente: omite los clientes que ya tienen la casilla.
+"""
+
 import argparse
 import json
 import os
@@ -14,6 +23,8 @@ from scripts.odoo_xmlrpc import OdooXmlRpcClient
 
 
 TARGET_FIELDS = ["name", "display_name", "customer_rank", "valued_picking", "active"]
+PAGE = 2000
+BATCH_SIZE = 300
 
 
 def parse_args(argv=None):
@@ -65,7 +76,7 @@ def parse_id_list(raw_value):
 
 
 def log(message):
-    print(message)
+    print(message, flush=True)
 
 
 def build_target_domain(partner_ids):
@@ -82,16 +93,30 @@ def format_partner_label(partner):
     )
 
 
-def fetch_target_partners(target, partner_ids=None, limit=0, offset=0):
-    search_kwargs = {"offset": offset, "order": "id"}
-    if limit:
-        search_kwargs["limit"] = limit
-    return target.search_read(
-        "res.partner",
-        build_target_domain(partner_ids or []),
-        fields=TARGET_FIELDS,
-        **search_kwargs
-    )
+def iter_target_partners(target, partner_ids=None, limit=0, offset=0):
+    """Recorre los clientes por paginas (una llamada por pagina, no por cliente)."""
+    fetched = 0
+    while True:
+        size = PAGE
+        if limit:
+            size = min(PAGE, limit - fetched)
+            if size <= 0:
+                return
+        records = target.search_read(
+            "res.partner",
+            build_target_domain(partner_ids or []),
+            fields=TARGET_FIELDS,
+            limit=size,
+            offset=offset + fetched,
+            order="id",
+        )
+        if not records:
+            return
+        for record in records:
+            yield record
+        fetched += len(records)
+        if len(records) < size:
+            return
 
 
 def migrate(target, partner_ids=None, limit=0, offset=0, write=False):
@@ -100,29 +125,38 @@ def migrate(target, partner_ids=None, limit=0, offset=0, write=False):
         "would_update": 0,
         "already_marked": 0,
     }
-    partners = fetch_target_partners(
-        target,
-        partner_ids=partner_ids,
-        limit=limit,
-        offset=offset,
-    )
-
     log("Modo: {}".format("ESCRITURA" if write else "SIMULACION"))
-    log("Clientes detectados: {}".format(len(partners)))
 
-    for partner in partners:
+    block = []
+
+    def flush():
+        """Escribe (o informa) el bloque acumulado."""
+        if not block:
+            return
+        ids = [partner["id"] for partner in block]
+        if write:
+            target.write("res.partner", ids, {"valued_picking": True})
+            counters["updated"] += len(ids)
+            log("UPDATED      {} clientes (ids {}..{})".format(len(ids), ids[0], ids[-1]))
+        else:
+            counters["would_update"] += len(ids)
+            log(
+                "WOULD_UPDATE {} clientes (ids {}..{})".format(
+                    len(ids), ids[0], ids[-1]
+                )
+            )
+        block.clear()
+
+    for partner in iter_target_partners(
+        target, partner_ids=partner_ids, limit=limit, offset=offset
+    ):
         if partner.get("valued_picking"):
             counters["already_marked"] += 1
-            log("OMITIDO {} -> already_marked".format(format_partner_label(partner)))
             continue
-
-        if write:
-            target.write("res.partner", [partner["id"]], {"valued_picking": True})
-            counters["updated"] += 1
-            log("UPDATED {}".format(format_partner_label(partner)))
-        else:
-            counters["would_update"] += 1
-            log("WOULD_UPDATE {}".format(format_partner_label(partner)))
+        block.append(partner)
+        if len(block) >= BATCH_SIZE:
+            flush()
+    flush()
 
     log("Resumen:")
     for key, value in counters.items():

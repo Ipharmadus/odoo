@@ -315,6 +315,8 @@ PY
 
 El script usa XML-RPC contra el entorno destino y no necesita leer nada desde Odoo 8, aunque reutiliza el mismo `config.json` del paquete.
 
+Escribe **por lotes** (300 clientes por llamada): con decenas de miles de clientes, una escritura individual tardaría horas. Es idempotente: omite los que ya tienen la casilla.
+
 Simulacion sin escribir cambios:
 
 ```bash
