@@ -293,8 +293,12 @@ import sys
 sys.path.insert(0, '/opt/odoo/custom/src/pharmadus')
 from migracion_pharmadus_8_18.scripts.migrate_user_signatures import main
 main(env, ['--write'])
+env.cr.commit()
 PY
 ```
+
+`odoo shell` revierte la transacción al salir, así que el ejemplo **debe** terminar con `env.cr.commit()`;
+sin esa línea la simulación informa de los cambios pero no se guarda ninguno.
 
 Limitar a usuarios concretos:
 
