@@ -398,8 +398,16 @@ python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \
 En bases grandes, `--batch` hace la misma asignación en bloque: lee las claves de
 un lado y de otro por páginas y escribe por canal, en bloques de 300. Baja de una
 llamada por registro a una por bloque (en `pharmadus.odootea.com` pasó de ~11
-registros/s a minutos para 200.000 registros). Filtra por las compañías
-accesibles e informa de los bloques que fallen por permisos, sin abortar:
+registros/s a minutos para 200.000 registros). El filtro de compañías usa las
+compañías **del usuario** (`company_ids`), no las que puede leer: con las legibles
+se intentaban escribir registros de otras compañías y fallaba cada bloque.
+Además, si un bloque falla se **parte a la mitad** hasta aislar los registros
+problemáticos, de modo que una sola factura no tumba las 300:
+
+Resultado en Comunitea (2026-10-28): 33 canales (32 activos y WhatsApp archivado),
+**107.747 pedidos** asignados (0 sin canal) y **97.483 facturas**. Quedaron 49
+facturas canceladas sin asignar porque su diario pertenece a otra compañía y el
+usuario no puede leerlo (inconsistencia de datos de origen).
 
 ```bash
 python3 migracion_pharmadus_8_18/scripts/migrate_sale_channels.py \

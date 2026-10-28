@@ -214,6 +214,24 @@ def migrate_linked_records(
             )
 
 
+def write_block_safe(client, model, ids, values):
+    """Escribe el bloque; si falla, lo parte a la mitad hasta aislar los malos.
+
+    Una sola factura problematica tumbaba el bloque entero de 300; asi el resto
+    se escribe y solo se informan los registros que fallan de verdad.
+    """
+    try:
+        client.write(model, ids, values)
+        return list(ids), []
+    except xmlrpc.client.Fault as exc:
+        if len(ids) <= 1:
+            return [], [(ids[0], fault_message(exc))]
+        middle = len(ids) // 2
+        ok_left, ko_left = write_block_safe(client, model, ids[:middle], values)
+        ok_right, ko_right = write_block_safe(client, model, ids[middle:], values)
+        return ok_left + ok_right, ko_left + ko_right
+
+
 def migrate_linked_records_batch(
     source, target, channel_map, model, source_fields, target_model, key_field,
     ids, limit, write, target_domain=None, channel_names=None,
@@ -245,9 +263,11 @@ def migrate_linked_records_batch(
         "{}: {} leidos en origen, {} con canal".format(model, leidos, len(key_channel))
     )
 
-    allowed_companies = {
-        company["id"] for company in target.search_read("res.company", [], fields=["name"])
-    }
+    # Companias en las que el usuario puede OPERAR (no solo leer): con las
+    # legibles se intentaban escribir registros de otras companias y fallaba
+    # cada bloque con un error de multi-compania.
+    usuario = target.read("res.users", [target.uid], fields=["company_ids"])[0]
+    allowed_companies = set(usuario.get("company_ids") or [])
     pending = {}
     fuera_compania = 0
     for record in iterate_records(
@@ -283,16 +303,15 @@ def migrate_linked_records_batch(
         pending.items(), key=lambda item: -len(item[1])
     ):
         for block in chunked(record_ids, WRITE_CHUNK):
-            try:
-                target.write(
-                    target_model, block, {"sale_channel_id": target_channel_id}
-                )
-                escritos += len(block)
-            except xmlrpc.client.Fault as exc:
-                fallidos += len(block)
-                print(
-                    "  BLOQUE FALLIDO ({} ids): {}".format(len(block), fault_message(exc))
-                )
+            ok, ko = write_block_safe(
+                target, target_model, block, {"sale_channel_id": target_channel_id}
+            )
+            escritos += len(ok)
+            fallidos += len(ko)
+            for record_id, message in ko[:5]:
+                print("  FALLA id {}: {}".format(record_id, message))
+            if len(ko) > 5:
+                print("  ... y {} fallos mas en este canal".format(len(ko) - 5))
         name = (channel_names or {}).get(target_channel_id, target_channel_id)
         print("  {:<38} {:>6}".format(str(name)[:38], len(record_ids)))
     print("{}: {} escritos, {} fallidos".format(target_model, escritos, fallidos))
