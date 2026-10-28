@@ -18,6 +18,7 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/check_pricelists.py`: revisa (y opcionalmente corrige) las tarifas de venta de los clientes comparando Odoo 8 con Odoo 18.
 - `scripts/audit_product_expiry.py`: audita las fechas de caducidad de SIGI y propone `use_expiration_date`, `expiration_time` y `alert_time` para cada plantilla, sin escribir nada.
 - `scripts/migrate_lot_sequences.py`: asigna a los productos de Odoo 18 el secuenciador de lote que tienen en Odoo 8 (`product.template.sequence_id` → `lot_sequence_id`), creando en destino las secuencias que falten.
+- `scripts/fix_legacy_crons.py`: repara crones y workflows heredados de la migración (nombres de cron desincronizados, crones obsoletos de `queue_job`, filtros de `sale_automatic_workflow` y código de crones con API antigua).
 
 ## Requisitos
 
@@ -616,6 +617,9 @@ Notas:
   20 en `revised`, 3 en `in_rev` y 11 sin estado —**11.703 a normalizar**— y los 83 rechazados
   siguen sin `locked`. Los 5.381 lotes creados en Odoo 8 después del volcado (2025-10-28) no están
   en desarrollo.
+- Tras la pasada completa del 2026-10-28 sobre la base restaurada de Comunitea (52.148 lotes, cuatro
+  compañías): 12.276 lotes pasados a `pending` y los 83 rechazados bloqueados, con **0 estados
+  heredados**. Los ficheros de reversión fueron `lot_states_c{1,6,8,10}.json`/`.sql`.
 
 ## Secuenciadores de lote
 
@@ -667,3 +671,64 @@ Notas:
   en Odoo 18** (compañías 3 y 16 y altas posteriores) y que el script informa como
   `no existen en destino`. Después de la pasada hay 7.825 plantillas con secuencia y 454 secuencias
   `stock.lot.serial`. Es idempotente: la segunda pasada no encuentra nada que hacer.
+
+## Crones y workflows heredados
+
+`scripts/fix_legacy_crons.py` repara los restos de una migración en la capa de automatizaciones.
+Es idempotente y sin `--write` solo informa.
+
+Qué corrige:
+
+- **Nombres de cron**: `ir.cron.cron_name` es un campo calculado y almacenado a partir del nombre de
+  su acción, y la migración lo deja congelado. En el entorno de desarrollo había 76 crones llamados
+  «Base: Auto-vacuum internal data»; se recalcula desde la acción.
+- **Crones obsoletos de `queue_job`**: los que llaman a `requeue_stuck_jobs`, método que no existe en
+  18.0 (allí el módulo solo define el cron diario `model.autovacuum()`). Se eliminan junto con su
+  acción huérfana.
+- **Filtros de los workflows de venta**: `sale.workflow.process` con `order_filter_id`,
+  `create_invoice_filter_id`, `validate_invoice_filter_id`, `sale_done_filter_id` o
+  `payment_filter_id` vacíos. Sin ellos el cron «Automatic Workflow Job» falla cada minuto con
+  `ValueError: Expected singleton: ir.filters()`. Se rellenan con los `ir.filters` que crea el
+  módulo, sin sobrescribir los ya asignados.
+- **Crones con API antigua** (`model.run([<id>],)`): firma que en 18.0 lanza `TypeError:
+  IrActionsServer.run() takes 1 positional argument but 2 were given`. Dos opciones, excluyentes:
+  - `--repair-legacy-api-crons`: los reescribe como `env['ir.actions.server'].browse(<id>).run()`.
+  - `--deactivate-legacy-api-crons`: los deja inactivos (`active = False`) sin tocar el código.
+    Es lo recomendable en un entorno neutralizado.
+  **Ojo**: en el volcado de Comunitea hay 38 activos de estos y muchos son automatizaciones que
+  salen al exterior (marketplaces, PrestaShop); repararlos las reactiva, desactivarlos no.
+
+Simulación (no escribe):
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/fix_legacy_crons.py \
+  --config migracion_pharmadus_8_18/config.json
+```
+
+Escritura, borrando además crones concretos y guardando la reversión:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/fix_legacy_crons.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --delete-crons 83 --write --revert-out /home/odoo/revert/crons_revert.json
+```
+
+- `--delete-crons 83,84`: elimina esos `ir.cron` y, si la acción queda huérfana, también la acción.
+- `--repair-legacy-api-crons`: reescribe el código de API antigua (opt-in por el motivo de arriba).
+- `--deactivate-legacy-api-crons`: deja inactivos los crones con API antigua, sin tocar el código:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/fix_legacy_crons.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --deactivate-legacy-api-crons --write
+```
+
+- La reversión JSON guarda los valores anteriores y, para los crones eliminados, su nombre y el
+  código de la acción; para los desactivados, el estado `active` previo, para poder reactivarlos
+  a mano.
+
+Resultado en el entorno de desarrollo (2026-10-28): 2 crones eliminados (161 «Jobs Garbage Collector»
+de un `queue_job` antiguo y 83 «Desmarcar presupuesto tras 35 minutos»), 8 filtros rellenados en los
+workflows `Automatic` y `Manual`, 67 nombres de cron corregidos y el cron 85 funcionando. Quedan 7
+crones con el nombre «Base: Auto-vacuum internal data»: son los autovacuum legítimos de Odoo, cuyo
+nombre de acción es realmente ese. Los 38 crones con API antigua quedan solo informados.
