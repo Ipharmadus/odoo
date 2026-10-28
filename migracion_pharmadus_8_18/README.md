@@ -19,6 +19,7 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/audit_product_expiry.py`: audita las fechas de caducidad de SIGI y propone `use_expiration_date`, `expiration_time` y `alert_time` para cada plantilla, sin escribir nada.
 - `scripts/migrate_lot_sequences.py`: asigna a los productos de Odoo 18 el secuenciador de lote que tienen en Odoo 8 (`product.template.sequence_id` → `lot_sequence_id`), creando en destino las secuencias que falten.
 - `scripts/fix_legacy_crons.py`: repara crones y workflows heredados de la migración (nombres de cron desincronizados, crones obsoletos de `queue_job`, filtros de `sale_automatic_workflow` y código de crones con API antigua).
+- `scripts/propagate_lot_expiry_dates.py`: lleva a los lotes la caducidad configurada en el producto (caducidad y consumo preferente), tratando aparte las fechas marcador de «no caduca».
 
 ## Requisitos
 
@@ -732,3 +733,51 @@ de un `queue_job` antiguo y 83 «Desmarcar presupuesto tras 35 minutos»), 8 fil
 workflows `Automatic` y `Manual`, 67 nombres de cron corregidos y el cron 85 funcionando. Quedan 7
 crones con el nombre «Base: Auto-vacuum internal data»: son los autovacuum legítimos de Odoo, cuyo
 nombre de acción es realmente ese. Los 38 crones con API antigua quedan solo informados.
+
+## Fechas de caducidad de los lotes
+
+`scripts/propagate_lot_expiry_dates.py` lleva a los lotes la caducidad que se acaba de configurar en
+el producto. Hace falta porque Odoo **no recalcula** las fechas de los lotes existentes: los campos
+son `store=True` y el cálculo solo rellena huecos.
+
+Para cada lote de un producto con `use_expiration_date` y `expiration_time > 0`:
+
+- Si no tiene `expiration_date`, toma **la mayor** de sus fechas de consumo preferente y de alerta.
+  En SIGI había una sola fecha, y el módulo `product_preferential_consumption` rellenaba `use_date`
+  aunque el producto no tuviera consumo preferente, así que cuando la alerta es posterior es la
+  alerta la que vale.
+- Rellena `use_date` con la caducidad (los productos migrados tienen `use_time = 0`), pero no pisa un
+  consumo ya informado cuando la caducidad ya existía.
+- `--set-removal` rellena también `removal_date`.
+- `--recompute-alert-date` recoloca la alerta a `expiration_date - alert_time` días. Por defecto se
+  conserva la de SIGI, con lo que en los lotes deducidos la alerta queda en la misma fecha que la
+  caducidad.
+- Los lotes con fechas marcador (`>= --marker-from`, por defecto 2100-01-01, la convención de SIGI
+  para «no caduca») se informan y se omiten, salvo `--include-markers`.
+
+Simulación:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/propagate_lot_expiry_dates.py \
+  --config migracion_pharmadus_8_18/config.json
+```
+
+Escritura, con reversión aplicable:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/propagate_lot_expiry_dates.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --write --revert-out /home/odoo/revert/lot_expiry_dates.json
+```
+
+La reversión se aplica con `--restore-from`:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/propagate_lot_expiry_dates.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --restore-from /home/odoo/revert/lot_expiry_dates.json --write
+```
+
+Resultado en el entorno de desarrollo (2026-10-28), tras migrar la caducidad de 1.602 productos:
+22.466 lotes revisados, 20.621 actualizados, 1.746 ya correctos, 97 sin ninguna fecha y 2 con fecha
+marcador omitidos.
