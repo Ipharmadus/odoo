@@ -145,6 +145,47 @@
         </t>
     </template>
 
+    <record id="view_print_lot_labels_form" model="ir.ui.view">
+        <field name="name">print.lot.labels.form</field>
+        <field name="model">print.lot.labels</field>
+        <field name="arch" type="xml">
+            <form string="Etiquetas de cajones">
+                <group>
+                    <field name="lot_id" readonly="1"/>
+                    <field name="product_id"/>
+                    <field name="gtin_id" options="{'no_create': True}"/>
+                    <field name="product_tmpl_id" invisible="1"/>
+                </group>
+                <footer>
+                    <button
+                        name="print_labels"
+                        string="Imprimir"
+                        type="object"
+                        class="btn-primary"
+                        icon="fa-print"
+                    />
+                    <button
+                        name="print_tiny_labels"
+                        string="Imprimir pequeña"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-print"
+                    />
+                    <button string="Cancelar" special="cancel" class="btn-link"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_print_lot_labels" model="ir.actions.act_window">
+        <field name="name">Etiquetas de cajones</field>
+        <field name="res_model">print.lot.labels</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="stock.model_stock_lot"/>
+        <field name="binding_type">action</field>
+    </record>
+
     <record id="action_report_lot_box_label" model="ir.actions.report">
         <field name="name">Etiquetas de cajones</field>
         <field name="model">stock.lot</field>

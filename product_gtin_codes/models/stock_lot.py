@@ -27,9 +27,18 @@ class StockLot(models.Model):
     )
 
     def _pharmadus_label_gtin(self):
-        """GTIN-14 que va en la etiqueta: el del producto por defecto."""
+        """GTIN-14 que va en la etiqueta.
+
+        Si el asistente de impresión ha elegido uno, viaja en el contexto; si
+        no, se usa el del producto por defecto.
+        """
         self.ensure_one()
         product = self.product_id
+        chosen_id = self.env.context.get("pharmadus_gtin14_id")
+        if chosen_id:
+            chosen = self.env["product.gtin14"].browse(chosen_id).exists()
+            if chosen and chosen.product_tmpl_id == product.product_tmpl_id:
+                return chosen
         gtin = product.gtin14_default
         if not gtin:
             gtin = product.gtin14_ids.filtered(lambda line: line.log_var == 8)[:1]
