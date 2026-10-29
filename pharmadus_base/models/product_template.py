@@ -7,6 +7,25 @@ from odoo.exceptions import ValidationError
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
+    # En SIGI el codigo CN se guardaba en la variante y en la plantilla era un
+    # related no almacenado a product_variant_ids.cn_code. Se reproduce igual:
+    # el dato vive en la variante (donde estaba la columna del volcado) y la
+    # ficha lo lee y lo escribe a traves de este campo.
+    cn_code = fields.Char(
+        string="Código CN",
+        compute="_compute_cn_code",
+        inverse="_inverse_cn_code",
+        help="Código de la nomenclatura combinada (8 dígitos), para la aduana.",
+    )
+
+    def _compute_cn_code(self):
+        for template in self:
+            template.cn_code = template.product_variant_ids[:1].cn_code
+
+    def _inverse_cn_code(self):
+        for template in self:
+            template.product_variant_ids.cn_code = template.cn_code
+
     pharmadus_quantity = fields.Integer(
         string="Cantidad",
         default=1,

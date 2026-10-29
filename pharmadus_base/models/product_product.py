@@ -1,10 +1,19 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import api, models
+from odoo import api, fields, models
 
 
 class ProductProduct(models.Model):
     _inherit = "product.product"
+
+    # El campo existia en SIGI sobre la variante (char almacenado) y la columna
+    # `cn_code` sigue en product_product con los valores del volcado, pero en
+    # Odoo 18 no habia campo que la leyera. Al declararlo aqui, Odoo reutiliza
+    # la columna existente en vez de crear otra y los valores aparecen.
+    cn_code = fields.Char(
+        string="Código CN",
+        help="Código de la nomenclatura combinada (8 dígitos), para la aduana.",
+    )
 
     # Copia de addons/product/models/product_product.py::_compute_display_name
     # con el formato invertido: "nombre [referencia]" en lugar de
