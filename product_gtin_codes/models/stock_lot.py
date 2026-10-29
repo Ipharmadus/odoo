@@ -23,7 +23,7 @@ class StockLot(models.Model):
     duration_type = fields.Selection(
         DURATION_SELECTION,
         string="Tipo de duración",
-        help="Cómo se imprime la fecha de consumo en la etiqueta de cajas.",
+        help="Cómo se imprime la fecha de consumo en la etiqueta de cajones.",
     )
 
     def _pharmadus_label_gtin(self):

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Etiquetas de cajas, portadas de SIGI (quality_protocol_report:
+    <!-- Etiquetas de cajones, portadas de SIGI (quality_protocol_report:
          "Mrp labels" y "MRP tiny labels"), pero impresas desde el lote y no
          desde la orden de produccion: los datos que necesitan (GTIN-14,
          envase, fechas) ya estan en el lote.
@@ -9,7 +9,7 @@
          exacto de sus modulos y se pinta en milimetros, y los paperformat
          llevan disable_shrinking para que wkhtmltopdf no reescale. -->
     <record id="paperformat_lot_box_label" model="report.paperformat">
-        <field name="name">Etiqueta de cajas</field>
+        <field name="name">Etiqueta de cajones</field>
         <field name="format">A6</field>
         <field name="page_height">0</field>
         <field name="page_width">0</field>
@@ -25,7 +25,7 @@
     </record>
 
     <record id="paperformat_lot_tiny_box_label" model="report.paperformat">
-        <field name="name">Etiqueta de cajas pequeña</field>
+        <field name="name">Etiqueta de cajones pequeña</field>
         <field name="format">custom</field>
         <field name="page_height">60</field>
         <field name="page_width">100</field>
@@ -146,25 +146,25 @@
     </template>
 
     <record id="action_report_lot_box_label" model="ir.actions.report">
-        <field name="name">Etiquetas de cajas</field>
+        <field name="name">Etiquetas de cajones</field>
         <field name="model">stock.lot</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">product_gtin_codes.report_lot_box_label</field>
         <field name="report_file">product_gtin_codes.report_lot_box_label</field>
         <field name="paperformat_id" ref="paperformat_lot_box_label"/>
-        <field name="print_report_name">'Etiquetas de cajas - %s' % (object.name)</field>
+        <field name="print_report_name">'Etiquetas de cajones - %s' % (object.name)</field>
         <field name="binding_model_id" ref="stock.model_stock_lot"/>
         <field name="binding_type">report</field>
     </record>
 
     <record id="action_report_lot_tiny_box_label" model="ir.actions.report">
-        <field name="name">Etiquetas de cajas pequeñas</field>
+        <field name="name">Etiquetas de cajones pequeñas</field>
         <field name="model">stock.lot</field>
         <field name="report_type">qweb-pdf</field>
         <field name="report_name">product_gtin_codes.report_lot_tiny_box_label</field>
         <field name="report_file">product_gtin_codes.report_lot_tiny_box_label</field>
         <field name="paperformat_id" ref="paperformat_lot_tiny_box_label"/>
-        <field name="print_report_name">'Etiquetas de cajas pequeñas - %s' % (object.name)</field>
+        <field name="print_report_name">'Etiquetas de cajones pequeñas - %s' % (object.name)</field>
         <field name="binding_model_id" ref="stock.model_stock_lot"/>
         <field name="binding_type">report</field>
     </record>
