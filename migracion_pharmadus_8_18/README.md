@@ -19,6 +19,7 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/migrate_lot_sequences.py`: asigna a los productos de Odoo 18 el secuenciador de lote que tienen en Odoo 8 (`product.template.sequence_id` → `lot_sequence_id`), creando en destino las secuencias que falten.
 - `scripts/fix_legacy_crons.py`: repara crones y workflows heredados de la migración (nombres de cron desincronizados, crones obsoletos de `queue_job`, filtros de `sale_automatic_workflow` y código de crones con API antigua).
 - `scripts/propagate_lot_expiry_dates.py`: lleva a los lotes la caducidad configurada en el producto (caducidad y consumo preferente), tratando aparte las fechas marcador de «no caduca».
+- `scripts/migrate_lot_packaging.py`: lleva a los lotes el tipo de envase, el número de envases y los pallets de SIGI (`container_type`, `container_number`, `pallets`) a la pestaña «Recepción» de Odoo 18 (`pharmadus_packaging_type_id`, `pharmadus_package_count`, `pharmadus_pallet_count`).
 
 ## Requisitos
 
@@ -798,3 +799,95 @@ python3 migracion_pharmadus_8_18/scripts/propagate_lot_expiry_dates.py \
 Resultado en el entorno de desarrollo (2026-10-28), tras migrar la caducidad de 1.602 productos:
 22.466 lotes revisados, 20.621 actualizados, 1.746 ya correctos, 97 sin ninguna fecha y 2 con fecha
 marcador omitidos.
+
+## Envases y pallets del lote
+
+En SIGI, cada recepción deja en el lote el tipo de envase, cuántos envases y cuántos pallets trajo:
+`container_type` (many2one a `stock.container.type`), `container_number` y `pallets`. En Odoo 18 ese
+dato vive en `stock.lot.pharmadus_packaging_type_id`, `pharmadus_package_count` y
+`pharmadus_pallet_count`, que es lo que pinta la pestaña «Recepción» de la ficha del lote.
+
+`scripts/migrate_lot_packaging.py` lo lleva de un sitio a otro. El volcado conservó los valores
+antiguos en tres columnas de `stock_lot` (`container_type`, `container_number` y `pallets`) que en
+Odoo 18 ya **no** son campos del modelo, así que no se pueden leer por ORM ni por XML-RPC: el script
+va a SIGI y escribe en destino, que es lo único que funciona también contra Comunitea.
+
+Emparejamiento:
+
+- **Lote destino**: por `product_id` + `name`, que es la clave única de SIGI. No se usan los ids de
+  lote porque el volcado no los conservó de forma fiable en la cola (los últimos lotes de SIGI no
+  coinciden); los ids de producto sí.
+- **Tipo de envase**: por nombre normalizado (minúsculas, sin acentos, singular y sin lo que va
+  detrás de la barra), con alias para `UND` → `Unidad/es suelta/s`.
+
+Correspondencia observada:
+
+| SIGI | Odoo 18 | Lotes en SIGI |
+| --- | --- | ---: |
+| Cajas | Caja/s | 5.616 |
+| Sacos | Saco/s | 2.131 |
+| Rollos | Rollos/s | 1.366 |
+| Bobinas | Bobina/s | 1.354 |
+| BigBag | BigBag/s | 777 |
+| Bolsas | Bolsa/s | 464 |
+| Palet y Palets | Palet/s | 569 |
+| UND | Unidad/es suelta/s | 388 |
+| Botella | Botella/s | 85 |
+| Conos | Cono/s | 29 |
+| Bote | Bote/s | 20 |
+| Estuche | Estuche/s | 10 |
+| Expositor | Expositor/es | 1 |
+
+`Kraft/s` y `Tarro/s` existen en Odoo 18 y no en SIGI: se quedan como están.
+
+`Conos` (hilo de algodón, 29 lotes entre 2016 y 2026, con consumo a diario) faltaba en el catálogo
+del módulo: el CSV `data/pharmadus.product.packaging.type.csv` traía 14 tipos y no estaba. Se ha
+añadido `pharmadus_packaging_cono_s` («Cono/s») y el módulo pasa a 18.0.1.0.1. En destino sale en
+la siguiente actualización de `pharmadus_base`, sin hacer nada a mano.
+
+`--create-types` queda como red de seguridad para el futuro: crea en destino el tipo que falte, pero
+hace falta el permiso «Extra Rights/Product Creation», que el usuario de migración no tiene.
+
+Cotejo previo (2026-10-29): de los 12.810 lotes de SIGI con tipo de envase, el 98,9 % de los pares
+(producto, lote) caen en el lote que ya traía esos mismos valores en las columnas heredadas.
+
+Duplicados: 512 pares (producto, lote) aparecen varias veces en Odoo 18 y no siempre son copias
+exactas (el mismo lote con distinto número de envases). Por defecto se escribe solo en el candidato
+que conserva el id de SIGI, que acierta en 500 de los 512; los 12 restantes se listan en un CSV.
+`--on-duplicate all` escribe en todos y `--on-duplicate skip` en ninguno.
+
+Solo rellena huecos: no pisa un valor ya informado salvo `--overwrite`. Es idempotente.
+
+Simulación y escritura, contra desarrollo:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_lot_packaging.py \
+  --config migracion_pharmadus_8_18/config.json
+
+python3 migracion_pharmadus_8_18/scripts/migrate_lot_packaging.py \
+  --config migracion_pharmadus_8_18/config.json \
+  --write --revert-out /home/odoo/revert/lot_packaging.json
+```
+
+Contra producción, cambiando solo la configuración:
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_lot_packaging.py \
+  --config migracion_pharmadus_8_18/config.json.comunitea \
+  --write --revert-out /home/odoo/revert/lot_packaging_prod.json
+```
+
+La reversión se aplica con `--restore-from` (probada: deja los lotes como estaban y una pasada
+posterior los vuelve a rellenar).
+
+Resultado en desarrollo (2026-10-29), sobre 12.810 lotes con tipo de envase en SIGI:
+
+- 12.780 escritos: 12.251 directos, 500 resueltos por id entre duplicados y 29 de `Conos` tras
+  añadir el tipo al catálogo del módulo.
+- 12 duplicados sin resolver (CSV) y 18 lotes creados en SIGI después del volcado, que todavía no
+  están en Odoo 18.
+- Cotejo posterior de 200 lotes al azar contra SIGI: 200 con el mismo tipo, envases y pallets.
+
+Aviso: los albaranes impresos leen estos datos de `stock.move.line`, no del lote. Esta migración no
+toca las líneas de movimiento, así que los albaranes históricos se siguen imprimiendo sin envases;
+solo los nuevos, creados con el asistente de lotes, los llevan.
