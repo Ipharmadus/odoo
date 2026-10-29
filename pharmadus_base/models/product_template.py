@@ -15,7 +15,10 @@ class ProductTemplate(models.Model):
         string="Código CN",
         compute="_compute_cn_code",
         inverse="_inverse_cn_code",
-        help="Código de la nomenclatura combinada (8 dígitos), para la aduana.",
+        help=(
+            "Código Nacional (CN) es asignado por la Agencia Española de "
+            "Medicamentos y Productos Sanitarios (AEMPS)"
+        ),
     )
 
     def _compute_cn_code(self):

@@ -12,7 +12,10 @@ class ProductProduct(models.Model):
     # la columna existente en vez de crear otra y los valores aparecen.
     cn_code = fields.Char(
         string="Código CN",
-        help="Código de la nomenclatura combinada (8 dígitos), para la aduana.",
+        help=(
+            "Código Nacional (CN) es asignado por la Agencia Española de "
+            "Medicamentos y Productos Sanitarios (AEMPS)"
+        ),
     )
 
     # Copia de addons/product/models/product_product.py::_compute_display_name
