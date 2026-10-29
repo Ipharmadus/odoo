@@ -19,6 +19,7 @@
         "security/ir.model.access.csv",
         "views/product_views.xml",
         "views/barcode_report.xml",
+        "views/lot_labels.xml",
     ],
     "post_init_hook": "post_init_hook",
     "installable": True,

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Etiquetas de cajas, portadas de SIGI (quality_protocol_report:
+         "Mrp labels" y "MRP tiny labels"), pero impresas desde el lote y no
+         desde la orden de produccion: los datos que necesitan (GTIN-14,
+         envase, fechas) ya estan en el lote.
+
+         Como en la etiqueta GTIN, cada codigo se pide con un ancho multiplo
+         exacto de sus modulos y se pinta en milimetros, y los paperformat
+         llevan disable_shrinking para que wkhtmltopdf no reescale. -->
+    <record id="paperformat_lot_box_label" model="report.paperformat">
+        <field name="name">Etiqueta de cajas</field>
+        <field name="format">A6</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="dpi">96</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="orientation">Landscape</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="disable_shrinking" eval="True"/>
+    </record>
+
+    <record id="paperformat_lot_tiny_box_label" model="report.paperformat">
+        <field name="name">Etiqueta de cajas pequeña</field>
+        <field name="format">custom</field>
+        <field name="page_height">60</field>
+        <field name="page_width">100</field>
+        <field name="orientation">Portrait</field>
+        <field name="dpi">96</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="disable_shrinking" eval="True"/>
+    </record>
+
+    <template id="report_lot_box_label">
+        <t t-call="web.html_container">
+            <style type="text/css">
+                html, body { margin: 0; padding: 0; }
+                .caja { font-family: Helvetica, Arial, sans-serif; text-align: center; }
+                .caja img { display: block; margin: 0 auto; }
+                .caja__ref { font-size: 5mm; font-weight: 700; line-height: 1.1; }
+                .caja__nombre { font-weight: 700; line-height: 1.05; margin-top: 1mm; }
+                .caja__lote { font-weight: 700; line-height: 1; margin-top: 1mm; font-family: "Droid Sans Mono", monospace; }
+                .caja__linea { font-size: 6mm; font-weight: 700; line-height: 1.2; margin-top: 1mm; }
+                .caja__dato { font-size: 5mm; font-weight: 700; line-height: 1.2; }
+                .caja__gs1 { font-size: 4mm; font-weight: 700; line-height: 1.1; margin-top: 1mm; }
+            </style>
+            <t t-foreach="docs" t-as="o">
+                <t t-set="textos" t-value="o._pharmadus_label_texts()"/>
+                <t t-set="gtin" t-value="o._pharmadus_label_gtin()"/>
+                <t t-set="bc_producto" t-value="o._pharmadus_label_barcode(o.product_id.default_code or '', 7.0, 110.0, 130.0)"/>
+                <t t-set="bc_lote" t-value="o._pharmadus_label_barcode((o.name or '').replace('-', '/'), 8.0, 110.0, 130.0)"/>
+                <t t-set="bc_gtin" t-value="o._pharmadus_label_barcode(gtin.gtin14 if gtin else '', 7.0, 90.0, 120.0)"/>
+                <t t-set="bc_gs1" t-value="o._pharmadus_label_barcode(o._pharmadus_label_gs1(), 7.0, 120.0, 140.0)"/>
+                <div class="page">
+                    <div class="caja">
+                        <t t-if="o.product_id.default_code">
+                            <img t-att-src="bc_producto[0]" t-att-style="'height:%smm;width:%smm;' % (bc_producto[1], bc_producto[2])"/>
+                            <div class="caja__ref" t-out="o.product_id.default_code"/>
+                        </t>
+                        <div class="caja__nombre" t-att-style="'font-size:%s;' % o._pharmadus_label_name_font()" t-out="o.product_id.name"/>
+                        <img t-att-src="bc_lote[0]" t-att-style="'height:%smm;width:%smm;margin-top:1mm;' % (bc_lote[1], bc_lote[2])"/>
+                        <div class="caja__lote" t-att-style="'font-size:%s;' % o._pharmadus_label_lot_font()" t-out="o.name"/>
+                        <div class="caja__linea">
+                            <t t-out="textos['contains']"/>
+                            <t t-out="'{0:g}'.format(o._pharmadus_label_units())"/>
+                            <t t-out="o._pharmadus_label_packaging_name()"/>
+                        </div>
+                        <t t-if="gtin">
+                            <img t-att-src="bc_gtin[0]" t-att-style="'height:%smm;width:%smm;' % (bc_gtin[1], bc_gtin[2])"/>
+                            <div class="caja__dato" t-out="gtin.gtin14"/>
+                        </t>
+                        <div class="caja__dato" t-if="o._pharmadus_label_shows_production()">
+                            <t t-out="textos['production']"/>
+                            <t t-out="o._pharmadus_label_production_text()"/>
+                        </div>
+                        <div class="caja__dato" t-if="not o._pharmadus_label_shows_production()">
+                            <t t-out="textos['expiry']"/>
+                            <t t-out="o._pharmadus_label_expiry_text()"/>
+                        </div>
+                        <img t-att-src="bc_gs1[0]" t-att-style="'height:%smm;width:%smm;margin-top:1mm;' % (bc_gs1[1], bc_gs1[2])"/>
+                        <div class="caja__gs1" t-out="o._pharmadus_label_gs1_text()"/>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_lot_tiny_box_label">
+        <t t-call="web.html_container">
+            <style type="text/css">
+                html, body { margin: 0; padding: 0; }
+                .caja { font-family: Helvetica, Arial, sans-serif; text-align: center; }
+                .caja img { display: block; margin: 0 auto; }
+                .caja__ref { font-size: 3mm; font-weight: 700; line-height: 1.1; }
+                .caja__nombre { font-weight: 700; line-height: 1.05; }
+                .caja__lote { font-weight: 700; line-height: 1; margin-top: 0.5mm; font-family: "Droid Sans Mono", monospace; }
+                .caja__linea { font-size: 4mm; font-weight: 700; line-height: 1.15; margin-top: 0.5mm; }
+                .caja__dato { font-size: 3.5mm; font-weight: 700; line-height: 1.15; }
+            </style>
+            <t t-foreach="docs" t-as="o">
+                <t t-set="textos" t-value="o._pharmadus_label_texts()"/>
+                <t t-set="gtin" t-value="o._pharmadus_label_gtin()"/>
+                <t t-set="bc_producto" t-value="o._pharmadus_label_barcode(o.product_id.default_code or '', 5.0, 70.0, 90.0, 200)"/>
+                <t t-set="bc_lote" t-value="o._pharmadus_label_barcode((o.name or '').replace('-', '/'), 5.0, 70.0, 90.0, 200)"/>
+                <t t-set="bc_gtin" t-value="o._pharmadus_label_barcode(gtin.gtin14 if gtin else '', 5.0, 60.0, 90.0, 200)"/>
+                <div class="page">
+                    <div class="caja">
+                        <div class="caja__nombre" t-att-style="'font-size:%s;' % o._pharmadus_label_name_font(tiny=True)" t-out="o.product_id.name"/>
+                        <t t-if="o.product_id.default_code">
+                            <img t-att-src="bc_producto[0]" t-att-style="'height:%smm;width:%smm;' % (bc_producto[1], bc_producto[2])"/>
+                            <div class="caja__ref" t-out="o.product_id.default_code"/>
+                        </t>
+                        <div class="caja__lote" t-att-style="'font-size:%s;' % o._pharmadus_label_lot_font(tiny=True)" t-out="o.name"/>
+                        <img t-att-src="bc_lote[0]" t-att-style="'height:%smm;width:%smm;' % (bc_lote[1], bc_lote[2])"/>
+                        <div class="caja__ref" t-out="o.name"/>
+                        <div class="caja__linea">
+                            <t t-out="textos['contains']"/>
+                            <t t-out="'{0:g}'.format(o._pharmadus_label_units())"/>
+                            <t t-out="o._pharmadus_label_packaging_name()"/>
+                        </div>
+                        <t t-if="gtin">
+                            <img t-att-src="bc_gtin[0]" t-att-style="'height:%smm;width:%smm;' % (bc_gtin[1], bc_gtin[2])"/>
+                            <div class="caja__ref" t-out="gtin.gtin14"/>
+                        </t>
+                        <div class="caja__dato" t-if="o._pharmadus_label_shows_production()">
+                            <t t-out="textos['production']"/>
+                            <t t-out="o._pharmadus_label_production_text()"/>
+                        </div>
+                        <div class="caja__dato" t-if="not o._pharmadus_label_shows_production()">
+                            <t t-out="textos['expiry']"/>
+                            <t t-out="o._pharmadus_label_expiry_text()"/>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_lot_box_label" model="ir.actions.report">
+        <field name="name">Etiquetas de cajas</field>
+        <field name="model">stock.lot</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">product_gtin_codes.report_lot_box_label</field>
+        <field name="report_file">product_gtin_codes.report_lot_box_label</field>
+        <field name="paperformat_id" ref="paperformat_lot_box_label"/>
+        <field name="print_report_name">'Etiquetas de cajas - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="stock.model_stock_lot"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_lot_tiny_box_label" model="ir.actions.report">
+        <field name="name">Etiquetas de cajas pequeñas</field>
+        <field name="model">stock.lot</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">product_gtin_codes.report_lot_tiny_box_label</field>
+        <field name="report_file">product_gtin_codes.report_lot_tiny_box_label</field>
+        <field name="paperformat_id" ref="paperformat_lot_tiny_box_label"/>
+        <field name="print_report_name">'Etiquetas de cajas pequeñas - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="stock.model_stock_lot"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

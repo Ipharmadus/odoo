@@ -40,6 +40,41 @@ def gtin_barcode_size(value, height_mm, target_width_mm, max_width_mm, height_px
     return modules * pixels_per_module, height_px
 
 
+def barcode_image(env, value, height_mm, target_width_mm, max_width_mm, height_px=300):
+    """Imagen del codigo de barras incrustada (data URI) y su tamaño en mm.
+
+    El ancho sale de multiplicar el numero de modulos del Code128 por un numero
+    entero de pixeles, y en la etiqueta se pinta con ese ancho y ese alto
+    exactos: asi no se deforma y entra en el papel. Se incrusta porque
+    wkhtmltopdf no sabe pedirla por HTTP al generar el PDF.
+    """
+    width_px, height_px = gtin_barcode_size(
+        value, height_mm, target_width_mm, max_width_mm, height_px
+    )
+    # El generador de codigos de Odoo rechaza imagenes de mas de 1,2 millones de
+    # pixeles. Con codigos largos (el GS1 de la etiqueta de cajas lleva GTIN,
+    # fecha y lote) el ancho crece mucho, asi que se baja la resolucion hasta
+    # que entra: lo que manda es la proporcion, no los pixeles.
+    for candidate in (height_px, 200, 160, 120, 100):
+        width_px, alto_px = gtin_barcode_size(
+            value, height_mm, target_width_mm, max_width_mm, candidate
+        )
+        if width_px * alto_px <= 1100000 and max(width_px, alto_px) <= 10000:
+            height_px = alto_px
+            break
+    image = env["ir.actions.report"].barcode(
+        "Code128",
+        value,
+        width=width_px,
+        height=height_px,
+        quiet=0,
+        humanreadable=0,
+    )
+    src = "data:image/png;base64,%s" % base64.b64encode(image).decode()
+    width_mm = round(width_px * float(height_mm) / height_px, 1)
+    return src, height_mm, width_mm
+
+
 class ProductGtin14(models.Model):
     _name = "product.gtin14"
     _description = "GTIN-14 code"
@@ -212,34 +247,21 @@ class ProductGtin(models.TransientModel):
     gtin = fields.Char()
 
     def _pharmadus_gtin_label_image(self, height_mm, target_width_mm, max_width_mm):
-        """Devuelve (src, alto_mm, ancho_mm) de la imagen del codigo de barras.
-
-        El ancho sale de multiplicar el numero de modulos del Code128 por un
-        numero entero de pixeles, y en la etiqueta se pinta con ese ancho y ese
-        alto exactos: asi no se deforma y entra en el papel. La imagen se
-        devuelve incrustada (data URI) porque wkhtmltopdf no sabe pedirla por
-        HTTP al generar el PDF.
-        """
+        """Devuelve (src, alto_mm, ancho_mm) de la imagen del codigo de barras."""
         self.ensure_one()
-        value = self.gtin or ""
-        width_px, height_px = gtin_barcode_size(
-            value, height_mm, target_width_mm, max_width_mm
+        return barcode_image(
+            self.env, self.gtin or "", height_mm, target_width_mm, max_width_mm
         )
-        image = self.env["ir.actions.report"].barcode(
-            "Code128",
-            value,
-            width=width_px,
-            height=height_px,
-            quiet=0,
-            humanreadable=0,
-        )
-        src = "data:image/png;base64,%s" % base64.b64encode(image).decode()
-        width_mm = round(width_px * float(height_mm) / height_px, 1)
-        return src, height_mm, width_mm
 
 
 class ProductProduct(models.Model):
     _inherit = "product.product"
+
+    country = fields.Many2one(
+        comodel_name="res.country",
+        related="product_tmpl_id.country",
+        string="País",
+    )
 
     gtin12 = fields.Char(string="GTIN-12", readonly=True)
     gtin13 = fields.Char(
@@ -389,6 +411,20 @@ class ProductProduct(models.Model):
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
+
+    # Columnas que el volcado de SIGI dejo en product_template y que solo usan
+    # las etiquetas de cajas: pais de destino, tipo de prenda y tipo de
+    # duracion de la fecha de consumo.
+    country = fields.Many2one(comodel_name="res.country", string="País")
+    clothing = fields.Char(string="Prenda")
+    duration_type = fields.Selection(
+        [
+            ("exact", "Exacto"),
+            ("end_month", "Fin de mes"),
+            ("end_year", "Fin de año"),
+        ],
+        string="Tipo de duración",
+    )
 
     gtin12 = fields.Char(
         string="GTIN-12",
