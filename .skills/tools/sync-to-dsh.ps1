@@ -1,9 +1,9 @@
-# sync-to-dsh.ps1 - Sincroniza las skills de este repo con el espejo local que DSH autocarga.
+# sync-to-dsh.ps1 - Sincroniza las skills de este repo con las raices locales que DSH autocarga.
 #
 # DSH descubre skills en el sistema de ficheros LOCAL (~/.dsh/skills y
 # <projectRoot>/.dsh/skills), nunca en el servidor. Por eso las skills de .skills/ se
-# copian al espejo local del workspace remoto y cada copia lleva un banner con el
-# sha256 del fichero de origen.
+# copian a ~/.dsh/skills y cada copia lleva un banner con el sha256 del fichero de
+# origen.
 #
 # Uso (desde la maquina local, con la clave de sync autorizada en el servidor):
 #   pwsh -File sync-to-dsh.ps1                  # sincroniza lo que este desactualizado
@@ -32,7 +32,7 @@ $skills = @(
 
 if (-not (Test-Path $IdentityFile)) { throw "No existe la clave de sync: $IdentityFile" }
 
-# --- espejos locales del workspace remoto ------------------------------------
+# --- raices locales donde DSH busca skills -----------------------------------
 function ConvertFrom-DshPathName {
     param([string] $Name)
 
@@ -42,18 +42,33 @@ function ConvertFrom-DshPathName {
     try { return [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($padded)) } catch { return $null }
 }
 
+# DSH descubre skills en ~/.dsh/skills y <projectRoot>/.dsh/skills. El espejo que dejaba
+# el antiguo plugin dsh-ssh (~/.dsh/remote/<hostId>/<ruta remota en base64>/.dsh/skills)
+# ya no se monta, asi que el destino real es la raiz global. Los espejos que sigan
+# existiendo se mantienen al dia para no dejar copias huerfanas, pero su ausencia ya
+# no es un error.
+$skillRoots = @()
+
+$globalRoot = Join-Path $env:USERPROFILE '.dsh\skills'
+if (-not (Test-Path $globalRoot)) {
+    New-Item -ItemType Directory -Force -Path $globalRoot | Out-Null
+}
+$skillRoots += [pscustomobject]@{ Root = $globalRoot; Label = 'local' }
+
 # DSH nombra cada carpeta de espejo con la ruta remota en base64 SIN padding, asi que
 # decodificamos los nombres existentes en vez de codificar la ruta.
 $remoteRoot = Join-Path $env:USERPROFILE '.dsh\remote'
-$mirrors = @(
-    Get-ChildItem $remoteRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-        Get-ChildItem $_.FullName -Directory -ErrorAction SilentlyContinue |
-            Where-Object { (ConvertFrom-DshPathName $_.Name) -eq $RemotePath } |
-            ForEach-Object { $_.FullName }
+if (Test-Path $remoteRoot) {
+    foreach ($hostDir in (Get-ChildItem $remoteRoot -Directory -ErrorAction SilentlyContinue)) {
+        foreach ($pathDir in (Get-ChildItem $hostDir.FullName -Directory -ErrorAction SilentlyContinue)) {
+            if ((ConvertFrom-DshPathName $pathDir.Name) -eq $RemotePath) {
+                $skillRoots += [pscustomobject]@{
+                    Root  = Join-Path $pathDir.FullName '.dsh\skills'
+                    Label = "espejo:$(($hostDir.Name -split '-')[0])"
+                }
+            }
+        }
     }
-)
-if ($mirrors.Count -eq 0) {
-    throw "No hay espejo local para '$RemotePath' bajo $remoteRoot. Abre una sesion DSH sobre ese workspace al menos una vez."
 }
 
 $sshCommon = @(
@@ -154,8 +169,8 @@ $pending = 0
 foreach ($skill in $skills) {
     $info = Get-RemoteSkill -SourceDir $skill.SourceDir
 
-    foreach ($mirror in $mirrors) {
-        $target = Join-Path (Join-Path $mirror ".dsh\skills\$($skill.Name)") 'SKILL.md'
+    foreach ($skillRoot in $skillRoots) {
+        $target = Join-Path $skillRoot.Root "$($skill.Name)\SKILL.md"
         $localSha = Get-BannerSha $target
 
         $state = if ($null -eq $localSha) { 'falta' }
@@ -173,7 +188,7 @@ foreach ($skill in $skills) {
 
         $results += [pscustomobject]@{
             Skill  = $skill.Name
-            Host   = Split-Path -Leaf (Split-Path -Parent $mirror)
+            Host   = $skillRoot.Label
             Estado = $state
             Sha256 = $info.Sha256.Substring(0, 12)
             Bytes  = $info.Bytes
