@@ -1,5 +1,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
+import base64
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -8,6 +10,34 @@ def gtin14_control_code(code):
     """Digito de control GTIN-14 (modulo 10, pesos 3 y 1)."""
     total = sum(int(digit) * (3 if index % 2 == 0 else 1) for index, digit in enumerate(code))
     return (10 - total % 10) % 10
+
+
+def gtin_barcode_size(value, height_mm, target_width_mm, max_width_mm, height_px=300):
+    """Tamano en px para que el Code128 salga con los modulos iguales.
+
+    reportlab reparte los modulos del codigo en el ancho que se le pida, asi
+    que un ancho redondo deja barras mas gordas unas que otras: el codigo se ve
+    pero el lector no lo lee. Pidiendo un ancho que sea multiplo exacto del
+    numero de modulos, todos miden lo mismo. Es el mismo criterio que usa
+    pharmadus_base para las etiquetas de lote.
+
+    Se apunta al ancho deseado y se recorta si no cabe en el maximo. Devuelve
+    (ancho_px, alto_px) para pedir la imagen al generador de codigos.
+    """
+    from reportlab.graphics.barcode import code128
+
+    try:
+        modules = int(code128.Code128(value, barWidth=1, barHeight=1, quiet=0).width)
+    except Exception:  # noqa: BLE001 - si reportlab no sabe codificarlo, minimo
+        return height_px, height_px
+    if modules <= 0:
+        return height_px, height_px
+    mm_per_px = float(height_mm) / height_px
+    pixels_per_module = max(1, int(round(target_width_mm / mm_per_px / modules)))
+    max_px = int(max_width_mm / mm_per_px)
+    while pixels_per_module > 1 and modules * pixels_per_module > max_px:
+        pixels_per_module -= 1
+    return modules * pixels_per_module, height_px
 
 
 class ProductGtin14(models.Model):
@@ -180,6 +210,32 @@ class ProductGtin(models.TransientModel):
     _rec_name = "gtin"
 
     gtin = fields.Char()
+
+    def _pharmadus_gtin_label_image(self, height_mm, target_width_mm, max_width_mm):
+        """Devuelve (src, alto_mm, ancho_mm) de la imagen del codigo de barras.
+
+        El ancho sale de multiplicar el numero de modulos del Code128 por un
+        numero entero de pixeles, y en la etiqueta se pinta con ese ancho y ese
+        alto exactos: asi no se deforma y entra en el papel. La imagen se
+        devuelve incrustada (data URI) porque wkhtmltopdf no sabe pedirla por
+        HTTP al generar el PDF.
+        """
+        self.ensure_one()
+        value = self.gtin or ""
+        width_px, height_px = gtin_barcode_size(
+            value, height_mm, target_width_mm, max_width_mm
+        )
+        image = self.env["ir.actions.report"].barcode(
+            "Code128",
+            value,
+            width=width_px,
+            height=height_px,
+            quiet=0,
+            humanreadable=0,
+        )
+        src = "data:image/png;base64,%s" % base64.b64encode(image).decode()
+        width_mm = round(width_px * float(height_mm) / height_px, 1)
+        return src, height_mm, width_mm
 
 
 class ProductProduct(models.Model):

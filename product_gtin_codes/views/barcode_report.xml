@@ -1,18 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Etiquetas de codigo de barras.
+
+         Dos manias de wkhtmltopdf que condicionan el resultado:
+
+         - El navegador de la etiqueta mide lo que mide la imagen: si se le da
+           un ancho en pixeles, lo reparte entre los modulos del Code128 y las
+           barras salen unas mas gordas que otras, con lo que el lector no las
+           lee. El ancho se pide siempre multiplo exacto del numero de modulos
+           (ver gtin_barcode_size) y en la etiqueta se fija el tamano en mm, de
+           modo que el escalado es exacto y la proporcion no cambia.
+         - La imagen se sale del papel si se deja con su tamano natural (1400 px
+           son 370 mm). Por eso los dos informes fijan alto y ancho en mm y
+           dejan margen de sobra dentro del paperformat. -->
     <record id="paperformat_gtin_barcode" model="report.paperformat">
         <field name="name">GTIN Barcode</field>
         <field name="format">A6</field>
         <field name="page_height">0</field>
         <field name="page_width">0</field>
-        <field name="dpi">90</field>
-        <field name="margin_top">1</field>
-        <field name="margin_bottom">1</field>
-        <field name="margin_left">1</field>
-        <field name="margin_right">1</field>
+        <!-- Sin esto wkhtmltopdf reescala el contenido entero (smart shrinking)
+             y la imagen del codigo se remuestrea: las barras dejan de medir lo
+             mismo unas que otras. -->
+        <field name="dpi">96</field>
+        <field name="disable_shrinking" eval="True"/>
+        <field name="margin_top">2</field>
+        <field name="margin_bottom">2</field>
+        <field name="margin_left">2</field>
+        <field name="margin_right">2</field>
         <field name="orientation">Landscape</field>
         <field name="header_line" eval="False"/>
-        <field name="header_spacing">1</field>
+        <field name="header_spacing">0</field>
     </record>
 
     <record id="paperformat_gtin_barcode_tiny" model="report.paperformat">
@@ -21,24 +38,43 @@
         <field name="page_height">60</field>
         <field name="page_width">100</field>
         <field name="orientation">Portrait</field>
-        <field name="margin_top">3</field>
-        <field name="margin_bottom">1</field>
-        <field name="margin_left">1</field>
-        <field name="margin_right">1</field>
+        <field name="margin_top">2</field>
+        <field name="margin_bottom">2</field>
+        <field name="margin_left">2</field>
+        <field name="margin_right">2</field>
         <field name="header_line" eval="False"/>
-        <field name="header_spacing">1</field>
-        <field name="dpi">90</field>
+        <field name="header_spacing">0</field>
+        <!-- Sin esto wkhtmltopdf reescala el contenido entero (smart shrinking)
+             y la imagen del codigo se remuestrea: las barras dejan de medir lo
+             mismo unas que otras. -->
+        <field name="dpi">96</field>
+        <field name="disable_shrinking" eval="True"/>
     </record>
 
     <template id="gtin_barcode_report">
         <t t-call="web.html_container">
+            <style type="text/css">
+                html, body { margin: 0; padding: 0; }
+                .gtin-label { padding-top: 24mm; text-align: center; }
+                .gtin-label img { display: block; margin: 0 auto; }
+                .gtin-label__code {
+                    font-family: Helvetica, Arial, sans-serif;
+                    font-size: 26px;
+                    font-weight: 700;
+                    letter-spacing: 2px;
+                    margin-top: 3mm;
+                }
+            </style>
             <t t-foreach="docs" t-as="o">
+                <t t-set="imagen" t-value="o._pharmadus_gtin_label_image(30.0, 100.0, 130.0)"/>
                 <div class="page">
-                    <div class="text-center">
-                        <span
-                            t-out="o.gtin"
-                            t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 1400, 'height': 300, 'quiet': 0, 'humanreadable': 1}"
+                    <div class="gtin-label">
+                        <img
+                            t-att-src="imagen[0]"
+                            t-att-style="'height:%smm;width:%smm;' % (imagen[1], imagen[2])"
+                            alt="GTIN"
                         />
+                        <div class="gtin-label__code" t-out="o.gtin"/>
                     </div>
                 </div>
             </t>
@@ -47,13 +83,28 @@
 
     <template id="gtin_barcode_report_tiny">
         <t t-call="web.html_container">
+            <style type="text/css">
+                html, body { margin: 0; padding: 0; }
+                .gtin-label { padding-top: 14mm; text-align: center; }
+                .gtin-label img { display: block; margin: 0 auto; }
+                .gtin-label__code {
+                    font-family: Helvetica, Arial, sans-serif;
+                    font-size: 11px;
+                    font-weight: 700;
+                    letter-spacing: 1px;
+                    margin-top: 1.5mm;
+                }
+            </style>
             <t t-foreach="docs" t-as="o">
+                <t t-set="imagen" t-value="o._pharmadus_gtin_label_image(14.0, 60.0, 90.0)"/>
                 <div class="page">
-                    <div class="text-center">
-                        <span
-                            t-out="o.gtin"
-                            t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 900, 'height': 150, 'quiet': 0, 'humanreadable': 1}"
+                    <div class="gtin-label">
+                        <img
+                            t-att-src="imagen[0]"
+                            t-att-style="'height:%smm;width:%smm;' % (imagen[1], imagen[2])"
+                            alt="GTIN"
                         />
+                        <div class="gtin-label__code" t-out="o.gtin"/>
                     </div>
                 </div>
             </t>
