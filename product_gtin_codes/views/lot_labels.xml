@@ -194,8 +194,10 @@
         <field name="report_file">product_gtin_codes.report_lot_box_label</field>
         <field name="paperformat_id" ref="paperformat_lot_box_label"/>
         <field name="print_report_name">'Etiquetas de cajones - %s' % (object.name)</field>
-        <field name="binding_model_id" ref="stock.model_stock_lot"/>
-        <field name="binding_type">report</field>
+        <!-- Sin binding: no salen en el menu Imprimir. Se imprimen
+             desde el asistente "Etiquetas de cajones" del menu de
+             acciones, que deja elegir el GTIN-14. -->
+        <field name="binding_model_id" eval="False"/>
     </record>
 
     <record id="action_report_lot_tiny_box_label" model="ir.actions.report">
@@ -206,7 +208,9 @@
         <field name="report_file">product_gtin_codes.report_lot_tiny_box_label</field>
         <field name="paperformat_id" ref="paperformat_lot_tiny_box_label"/>
         <field name="print_report_name">'Etiquetas de cajones pequeñas - %s' % (object.name)</field>
-        <field name="binding_model_id" ref="stock.model_stock_lot"/>
-        <field name="binding_type">report</field>
+        <!-- Sin binding: no salen en el menu Imprimir. Se imprimen
+             desde el asistente "Etiquetas de cajones" del menu de
+             acciones, que deja elegir el GTIN-14. -->
+        <field name="binding_model_id" eval="False"/>
     </record>
 </odoo>
