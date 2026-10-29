@@ -114,6 +114,23 @@
         </field>
     </record>
 
+    <!-- En "Historial de movimientos" (accion stock.stock_move_line_action) la
+         primera columna es `date`, que el propio campo define como fecha de
+         creacion de la linea de movimiento (y de ultima actualizacion cuando
+         cambia la cantidad, el estado o se valida). La fecha del movimiento es
+         `scheduled_date`. Se oculta la de creacion y se deja en la lista de
+         columnas opcionales por si alguien la necesita. -->
+    <record id="view_move_line_tree_pharmadus_hide_line_date" model="ir.ui.view">
+        <field name="name">stock.move.line.list.pharmadus.hide.line.date</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_move_line_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='date']" position="attributes">
+                <attribute name="optional">hide</attribute>
+            </xpath>
+        </field>
+    </record>
+
     <!-- El botón "Traslados" del núcleo calcula `delivery_count` en cada carga del
          formulario: stock.lot._find_delivery_ids_by_lot_iterative recorre toda la
          genealogía del lote (stock_move_line_consume_rel tiene 57 M de filas), y en
