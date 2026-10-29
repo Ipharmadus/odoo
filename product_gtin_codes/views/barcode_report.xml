@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_gtin_barcode" model="report.paperformat">
+        <field name="name">GTIN Barcode</field>
+        <field name="format">A6</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="dpi">90</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="orientation">Landscape</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">1</field>
+    </record>
+
+    <record id="paperformat_gtin_barcode_tiny" model="report.paperformat">
+        <field name="name">GTIN Barcode tiny</field>
+        <field name="format">custom</field>
+        <field name="page_height">60</field>
+        <field name="page_width">100</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">3</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">1</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <template id="gtin_barcode_report">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <div class="page">
+                    <div class="text-center">
+                        <span
+                            t-out="o.gtin"
+                            t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 1400, 'height': 300, 'quiet': 0, 'humanreadable': 1}"
+                        />
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <template id="gtin_barcode_report_tiny">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <div class="page">
+                    <div class="text-center">
+                        <span
+                            t-out="o.gtin"
+                            t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 900, 'height': 150, 'quiet': 0, 'humanreadable': 1}"
+                        />
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_gtin_barcode" model="ir.actions.report">
+        <field name="name">GTIN barcode</field>
+        <field name="model">product.gtin</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">product_gtin_codes.gtin_barcode_report</field>
+        <field name="report_file">product_gtin_codes.gtin_barcode_report</field>
+        <field name="paperformat_id" ref="paperformat_gtin_barcode"/>
+        <field name="print_report_name">'Etiqueta GTIN'</field>
+    </record>
+
+    <record id="action_report_gtin_barcode_tiny" model="ir.actions.report">
+        <field name="name">GTIN barcode tiny</field>
+        <field name="model">product.gtin</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">product_gtin_codes.gtin_barcode_report_tiny</field>
+        <field name="report_file">product_gtin_codes.gtin_barcode_report_tiny</field>
+        <field name="paperformat_id" ref="paperformat_gtin_barcode_tiny"/>
+        <field name="print_report_name">'Etiqueta GTIN pequeña'</field>
+    </record>
+</odoo>

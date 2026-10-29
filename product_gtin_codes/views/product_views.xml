@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- La pestana va en la ficha de la plantilla, que es la que se abre desde
+         Productos. Los datos siguen viviendo en la variante, como en SIGI, pero
+         en Pharmadus todos los productos tienen una sola variante y los campos
+         de arriba los leen de ella. La pestana solo aparece cuando el producto
+         tiene codigo de barras, igual que en Odoo 8. -->
+    <record id="product_gtin_codes_product_form" model="ir.ui.view">
+        <field name="name">product.template.form.gtin.codes</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general_information']" position="after">
+                <page name="gtin_codes" string="Códigos GTIN" invisible="not barcode">
+                    <group>
+                        <group string="GTIN asignados al producto">
+                            <label for="gtin12"/>
+                            <div class="d-flex align-items-center gap-2">
+                                <field name="gtin12" nolabel="1" class="oe_inline"/>
+                                <button
+                                    name="action_get_gtin_barcode"
+                                    type="object"
+                                    icon="fa-barcode"
+                                    string="Ver código"
+                                    context="{'barcode_type': 'gtin12'}"
+                                    class="btn-link"
+                                />
+                                <button
+                                    name="action_print_gtin_barcode"
+                                    type="object"
+                                    icon="fa-print"
+                                    string="Imprimir"
+                                    context="{'barcode_type': 'gtin12'}"
+                                    class="btn-link"
+                                />
+                                <button
+                                    name="action_print_tiny_gtin_barcode"
+                                    type="object"
+                                    icon="fa-print"
+                                    string="Imprimir pequeño"
+                                    context="{'barcode_type': 'gtin12'}"
+                                    class="btn-link"
+                                />
+                            </div>
+                            <label for="gtin13"/>
+                            <div class="d-flex align-items-center gap-2">
+                                <field name="gtin13" nolabel="1" class="oe_inline"/>
+                                <button
+                                    name="action_get_gtin_barcode"
+                                    type="object"
+                                    icon="fa-barcode"
+                                    string="Ver código"
+                                    context="{'barcode_type': 'gtin13'}"
+                                    class="btn-link"
+                                />
+                                <button
+                                    name="action_print_gtin_barcode"
+                                    type="object"
+                                    icon="fa-print"
+                                    string="Imprimir"
+                                    context="{'barcode_type': 'gtin13'}"
+                                    class="btn-link"
+                                />
+                                <button
+                                    name="action_print_tiny_gtin_barcode"
+                                    type="object"
+                                    icon="fa-print"
+                                    string="Imprimir pequeño"
+                                    context="{'barcode_type': 'gtin13'}"
+                                    class="btn-link"
+                                />
+                            </div>
+                        </group>
+                        <group string="Por defecto y GTIN asociados">
+                            <field
+                                name="gtin14_default"
+                                domain="[('product_tmpl_id', '=', id)]"
+                            />
+                            <field name="gtin_asociado_01"/>
+                            <field name="gtin_asociado_02"/>
+                        </group>
+                    </group>
+                    <label for="gtin14_ids"/>
+                    <field name="gtin14_ids" nolabel="1">
+                        <list editable="bottom" create="false" delete="false">
+                            <field name="log_var" invisible="1"/>
+                            <field name="gtin14"/>
+                            <field name="units" readonly="log_var == 8"/>
+                            <field name="used_for"/>
+                            <field name="partners_count"/>
+                            <button
+                                name="action_get_gtin_barcode"
+                                type="object"
+                                icon="fa-barcode"
+                                title="Ver código"
+                            />
+                            <button
+                                name="action_print_gtin_barcode"
+                                type="object"
+                                icon="fa-print"
+                                title="Imprimir"
+                            />
+                            <button
+                                name="action_print_tiny_gtin_barcode"
+                                type="object"
+                                icon="fa-print"
+                                title="Imprimir pequeño"
+                            />
+                            <button
+                                name="assign_partners"
+                                type="object"
+                                icon="fa-users"
+                                title="Asignar clientes"
+                            />
+                            <button
+                                name="configure_units"
+                                type="object"
+                                icon="fa-cubes"
+                                title="Unidades por cliente"
+                            />
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Dialogo para asignar clientes a un GTIN-14 -->
+    <record id="gtin14_partners_form" model="ir.ui.view">
+        <field name="name">product.gtin14.form.partners</field>
+        <field name="model">product.gtin14</field>
+        <field name="arch" type="xml">
+            <form string="GTIN14 associated partners">
+                <group>
+                    <field name="product_tmpl_id" readonly="1"/>
+                    <field name="gtin14" readonly="1"/>
+                    <field
+                        name="partner_ids"
+                        widget="many2many_tags"
+                        domain="[('parent_id', '=', False), ('customer_rank', '&gt;', 0)]"
+                    />
+                </group>
+            </form>
+        </field>
+    </record>
+
+    <!-- Dialogo para las unidades por cliente de un GTIN-14 -->
+    <record id="gtin14_units_tree" model="ir.ui.view">
+        <field name="name">product.gtin14.res.partner.rel.list</field>
+        <field name="model">product.gtin14.res.partner.rel</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" create="false" delete="false">
+                <field name="gtin14_id" invisible="1"/>
+                <field name="partner_id" readonly="1"/>
+                <field name="units"/>
+            </list>
+        </field>
+    </record>
+</odoo>
