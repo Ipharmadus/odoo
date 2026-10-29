@@ -413,7 +413,7 @@
                         <span t-out="lot_barcode" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': lot_size[0], 'height': lot_size[1], 'quiet': 0, 'img_style': 'display:block;'}"/>
                     </div>
                     <div class="pharmadus-state-label__footer">
-                        <span class="pharmadus-state-label__footer-fecha">Fecha: <t t-out="context_timestamp(datetime.datetime.now()).strftime('%d-%m-%Y')"/></span>
+                        <span class="pharmadus-state-label__footer-fecha">Fecha: <t t-out="(lot.pharmadus_last_detail_scheduled_date and context_timestamp(lot.pharmadus_last_detail_scheduled_date) or context_timestamp(datetime.datetime.now())).strftime('%d-%m-%Y')"/></span>
                         <span class="pharmadus-state-label__footer-firma">Firma:<span class="pharmadus-state-label__signature"/></span>
                     </div>
                 </div>

@@ -33,6 +33,39 @@ class StockLot(models.Model):
         help="Albaranes de entrada (recepciones) por los que entró el lote.",
     )
 
+    pharmadus_last_detail_scheduled_date = fields.Datetime(
+        string="Fecha del último movimiento",
+        compute="_compute_pharmadus_last_detail_scheduled_date",
+        help=(
+            "Fecha programada del último movimiento del lote en «Detalles de "
+            "lote». Es la que se imprime en las etiquetas de aprobado y "
+            "rechazado."
+        ),
+    )
+
+    def _compute_pharmadus_last_detail_scheduled_date(self):
+        """Fecha programada del último movimiento de «Detalles de lote».
+
+        Las etiquetas de aprobado y rechazado llevaban la fecha de impresión;
+        tiene que ser la del movimiento que aprobó o rechazó el lote, es decir
+        la de la última línea de «Detalles de lote» por fecha. No se puede
+        ordenar en SQL por ``scheduled_date`` (es un related sin almacenar) ni
+        por ``move_id.date`` (Odoo 18 no admite rutas en ``order``), así que se
+        ordenan las líneas del lote en memoria: son pocas por lote.
+        """
+        for lot in self:
+            move_lines = self.env["stock.move.line"].search(
+                lot._pharmadus_get_lot_details_domain(),
+            )
+            last_line = max(
+                move_lines,
+                key=lambda line: (line.scheduled_date or line.date, line.id),
+                default=None,
+            )
+            lot.pharmadus_last_detail_scheduled_date = (
+                last_line.scheduled_date if last_line else False
+            )
+
     def _compute_pharmadus_receipt_picking_ids(self):
         """Albaranes de entrada por los que entró la mercancía del lote.
 
