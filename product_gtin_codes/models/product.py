@@ -1,6 +1,7 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 def gtin14_control_code(code):
@@ -83,15 +84,25 @@ class ProductGtin14(models.Model):
                 gtin.used_for or "",
             )
 
+    @api.model
     def _pharmadus_gtin_barcode_action(self, code):
-        self.ensure_one()
+        """Accion para ver un codigo de barras. No depende del registro: la
+        usan tanto los botones de la ficha del producto (que la llaman sobre un
+        `product.gtin14` vacio) como los de cada linea de GTIN-14."""
         return {
             "name": _("Get barcode"),
             "type": "ir.actions.act_url",
             "target": "new",
-            "url": "/report/barcode/?type=Code128&humanreadable=1&value=%s" % code,
+            # En Odoo 18 el parametro del tipo se llama barcode_type (en SIGI
+            # era type) y la ruta es publica, asi que la imagen se sirve sin
+            # necesidad de sesion.
+            "url": (
+                "/report/barcode/?barcode_type=Code128&humanreadable=1&value=%s"
+                % code
+            ),
         }
 
+    @api.model
     def _pharmadus_gtin_print_action(self, code, tiny=False):
         gtin = self.env["product.gtin"].create({"gtin": code})
         xmlid = "product_gtin_codes.action_report_gtin_barcode"
@@ -297,18 +308,24 @@ class ProductProduct(models.Model):
         self.ensure_one()
         barcode_type = self.env.context.get("barcode_type")
         code = {"gtin12": self.gtin12, "gtin13": self.gtin13}.get(barcode_type)
+        if not code:
+            raise UserError(_("Este producto no tiene ese código asignado."))
         return self.env["product.gtin14"]._pharmadus_gtin_barcode_action(code)
 
     def action_print_gtin_barcode(self):
         self.ensure_one()
         barcode_type = self.env.context.get("barcode_type")
         code = {"gtin12": self.gtin12, "gtin13": self.gtin13}.get(barcode_type)
+        if not code:
+            raise UserError(_("Este producto no tiene ese código asignado."))
         return self.env["product.gtin14"]._pharmadus_gtin_print_action(code)
 
     def action_print_tiny_gtin_barcode(self):
         self.ensure_one()
         barcode_type = self.env.context.get("barcode_type")
         code = {"gtin12": self.gtin12, "gtin13": self.gtin13}.get(barcode_type)
+        if not code:
+            raise UserError(_("Este producto no tiene ese código asignado."))
         return self.env["product.gtin14"]._pharmadus_gtin_print_action(
             code, tiny=True
         )
@@ -393,18 +410,24 @@ class ProductTemplate(models.Model):
         self.ensure_one()
         barcode_type = self.env.context.get("barcode_type")
         code = {"gtin12": self.gtin12, "gtin13": self.gtin13}.get(barcode_type)
+        if not code:
+            raise UserError(_("Este producto no tiene ese código asignado."))
         return self.env["product.gtin14"]._pharmadus_gtin_barcode_action(code)
 
     def action_print_gtin_barcode(self):
         self.ensure_one()
         barcode_type = self.env.context.get("barcode_type")
         code = {"gtin12": self.gtin12, "gtin13": self.gtin13}.get(barcode_type)
+        if not code:
+            raise UserError(_("Este producto no tiene ese código asignado."))
         return self.env["product.gtin14"]._pharmadus_gtin_print_action(code)
 
     def action_print_tiny_gtin_barcode(self):
         self.ensure_one()
         barcode_type = self.env.context.get("barcode_type")
         code = {"gtin12": self.gtin12, "gtin13": self.gtin13}.get(barcode_type)
+        if not code:
+            raise UserError(_("Este producto no tiene ese código asignado."))
         return self.env["product.gtin14"]._pharmadus_gtin_print_action(
             code, tiny=True
         )
