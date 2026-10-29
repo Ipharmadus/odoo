@@ -83,7 +83,7 @@
                     <label for="gtin14_ids"/>
                     <field name="gtin14_ids" nolabel="1">
                         <list editable="bottom" create="false" delete="false">
-                            <field name="log_var" invisible="1"/>
+                            <field name="log_var" column_invisible="1"/>
                             <field name="gtin14"/>
                             <field name="units" readonly="log_var == 8"/>
                             <field name="used_for"/>
