@@ -59,6 +59,7 @@ Navigate to: **Especificaciones > SubLíneas**
 #### 3. Packaging Types
 Defined in catalog data files (CSV):
 - Bolsa/s, Bote/s, Estuche/s
+- BigBag/s, Bobina/s, Botella/s, Cono/s
 - Caja/s, Saco/s, Expositor/es
 - Tarro/s, Unit without packaging
 
