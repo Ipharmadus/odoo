@@ -3,7 +3,7 @@
 {
     "name": "Pharmadus Base",
     "summary": "Base module for Pharmadus-specific customizations",
-    "version": "18.0.1.0.5",
+    "version": "18.0.1.0.6",
     "category": "Hidden",
     "website": "https://github.com/Ipharmadus/odoo",
     "author": "Pharmadus Botanicals",
@@ -49,6 +49,7 @@
         "data/pharmadus_product_specification_data.xml",
         "report/sale_transfer_report_templates.xml",
         "data/mail_template_sale_transfer.xml",
+        "data/website_login_backend.xml",
         "views/stock_lot_wizard_views.xml",
     ],
     "assets": {

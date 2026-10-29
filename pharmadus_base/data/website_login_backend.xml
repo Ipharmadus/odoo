@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- El inicio de sesion de la web sustituye el layout del backend por el
+             del sitio (`website.login_layout` cambia `web.layout` por
+             `website.layout`). Eso obliga a que la peticion tenga un sitio
+             resuelto, y en esta base no siempre lo hay: `website` es de la
+             compania 1 y el resultado de `_get_current_website_id` se cachea
+             por dominio, sin empresa, asi que en cuanto una peticion de otra
+             compania (Maricielo, MBM) lo deja en vacio, TODAS las peticiones
+             siguientes se quedan sin sitio y `/web/login` revienta con
+             `KeyError: 'website'`. Paso el 2026-10-29, dos veces.
+
+             La web no se usa en el ERP, asi que se desactiva esa herencia y el
+             login se queda con el layout del backend, que no depende del sitio.
+             Es reversible: poniendo `active` a True vuelve el de la web. -->
+        <record id="website.login_layout" model="ir.ui.view">
+            <field name="active" eval="False"/>
+        </record>
+    </data>
+</odoo>
