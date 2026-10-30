@@ -910,14 +910,23 @@ El script, por cada marcador del usuario:
   ubicaciones de los dominios por `complete_name`, dejando el resto del filtro intacto;
 - es idempotente: si el usuario ya tiene ese marcador (mismo nombre y acción), lo salta.
 
+Con `--from-user` se copian los marcadores de una persona a otra, creando copias propias (cada una
+se puede editar o borrar sin afectar a la otra).
+
 ```bash
 python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
   --user sandra.garcia@pharmadus.com
 
 python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
   --user sandra.garcia@pharmadus.com --write
+
+# los mismos marcadores, para otra persona
+python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
+  --user javier.decastro@pharmadus.com \
+  --from-user sandra.garcia@pharmadus.com --write
 ```
 
-Simulación sobre los dos marcadores de `sandra.garcia` (2026-10-30): «Quants» → `stock.quant` con
-2 chips y «Movimientos pendientes» → `stock.move.line` con 3 chips; ubicaciones traducidas
-66→66, 95→95 y 260→263.
+Ejecutado el 2026-10-30 sobre producción: 2 marcadores y 5 chips para `sandra.garcia` (usuario 16)
+y los mismos 2 + 5 para `javier.decastro` (usuario 263). «Quants» → `stock.quant` con 2 chips y
+«Movimientos pendientes» → `stock.move.line` con 3; ubicaciones traducidas 66→66, 95→95 y
+260→263 en `CY01/Rechazado Calidad`, comprobado en los dominios ya escritos.

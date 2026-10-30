@@ -82,7 +82,16 @@ def parse_args(argv=None):
         default=os.path.join(PARENT_DIR, "config.json.comunitea"),
         help="Configuracion de destino (por defecto, produccion).",
     )
-    parser.add_argument("--user", required=True, help="Login del usuario a copiar.")
+    parser.add_argument("--user", required=True, help="Login del usuario al que se copian.")
+    parser.add_argument(
+        "--from-user",
+        default="",
+        help=(
+            "Login del usuario del que se leen los marcadores en origen; por "
+            "defecto el mismo que --user. Sirve para dar a otra persona los "
+            "marcadores de una."
+        ),
+    )
     parser.add_argument("--write", action="store_true", help="Escribe en destino.")
     parser.add_argument(
         "--revert-out",
@@ -214,9 +223,14 @@ def run(argv=None):
     log("Destino: {}".format(target.url))
     log("Modo:    {}".format("ESCRITURA" if args.write else "SIMULACION"))
 
-    user_source = find_user(source, args.user)
+    origen_login = args.from_user or args.user
+    user_source = find_user(source, origen_login)
     user_target = find_user(target, args.user)
-    log("Usuario {}: origen id={} destino id={}".format(args.user, user_source["id"], user_target["id"]))
+    log(
+        "Marcadores de {} (id {}) para {} (id {})".format(
+            origen_login, user_source["id"], args.user, user_target["id"]
+        )
+    )
 
     bookmarks = source.search_read(
         "res.bookmark", [("user_ids", "in", [user_source["id"]])], fields=BOOKMARK_FIELDS, order="id"
