@@ -9,7 +9,11 @@ ENTRY_LOCATION_XMLID = "stock.stock_location_company"
 STOCK_LOCATION_XMLID = "stock.stock_location_stock"
 QUALITY_RECEIPT_LOCATION_XMLID = "__export__.stock_location_14"
 QUALITY_REANALYSIS_LOCATION_XMLID = "__export__.stock_location_165"
+# Razon de «Control de calidad»: sus sububicaciones son Recepcion (14),
+# Cuarentena (75) y Reanalisis (165).
+QUALITY_ROOT_LOCATION_XMLID = "__export__.stock_location_95"
 REJECTED_LOCATION_XMLID = "lot_states.stock_location_rejected"
+REJECTED_QUALITY_LOCATION_XMLID = "__export__.stock_location_166"
 
 
 class StockLot(models.Model):
@@ -225,6 +229,9 @@ class StockLot(models.Model):
         return {
             "entry": self.env.ref(ENTRY_LOCATION_XMLID, raise_if_not_found=False),
             "stock": self.env.ref(STOCK_LOCATION_XMLID, raise_if_not_found=False),
+            "quality": self.env.ref(
+                QUALITY_ROOT_LOCATION_XMLID, raise_if_not_found=False
+            ),
             "receipt_quality": self.env.ref(
                 QUALITY_RECEIPT_LOCATION_XMLID, raise_if_not_found=False
             ),
@@ -232,70 +239,47 @@ class StockLot(models.Model):
                 QUALITY_REANALYSIS_LOCATION_XMLID, raise_if_not_found=False
             ),
             "rejected": self.env.ref(REJECTED_LOCATION_XMLID, raise_if_not_found=False),
+            "rejected_quality": self.env.ref(
+                REJECTED_QUALITY_LOCATION_XMLID, raise_if_not_found=False
+            ),
         }
 
     def _pharmadus_get_lot_details_domain(self):
+        """Movimientos del lote que cuentan en «Detalles de lote».
+
+        Todo lo que entra o sale del área de calidad —la raíz y sus
+        sububicaciones: Recepción, Cuarentena y Reanálisis— y de las ubicaciones
+        de rechazado.
+
+        Antes se enumeraban parejas concretas (entrada → recepción, recepción →
+        existencias, recepción → rechazado, existencia → reanálisis...) y por eso
+        se quedaban fuera las que no estaban en la lista, como
+        ``Cuarentena → Rechazado``: la cuarentena es otra sububicación de
+        calidad y no aparecía. Con la raíz y ``child_of`` entran todas, también
+        las que se creen en el futuro.
+        """
         self.ensure_one()
         base_domain = [("lot_id", "=", self.id), ("state", "=", "done")]
         locations = self._pharmadus_get_detail_locations()
-        entry_location = locations.get("entry")
-        stock_location = locations.get("stock")
-        receipt_quality_location = locations.get("receipt_quality")
-        reanalysis_quality_location = locations.get("reanalysis_quality")
-        rejected_location = locations.get("rejected")
+        quality_root = locations.get("quality")
+        rejected_ids = [
+            location.id
+            for location in (
+                locations.get("rejected"),
+                locations.get("rejected_quality"),
+            )
+            if location
+        ]
 
         detail_domains = []
-        if entry_location and receipt_quality_location:
+        if quality_root:
+            detail_domains.append([("location_id", "child_of", quality_root.id)])
             detail_domains.append(
-                [
-                    ("location_id", "=", entry_location.id),
-                    ("location_dest_id", "=", receipt_quality_location.id),
-                ]
+                [("location_dest_id", "child_of", quality_root.id)]
             )
-            if stock_location:
-                detail_domains.append(
-                    [
-                        ("location_id", "=", receipt_quality_location.id),
-                        ("location_dest_id", "child_of", stock_location.id),
-                    ]
-                )
-            if rejected_location:
-                detail_domains.append(
-                    [
-                        ("location_id", "=", receipt_quality_location.id),
-                        ("location_dest_id", "=", rejected_location.id),
-                    ]
-                )
-
-        if stock_location and reanalysis_quality_location:
-            detail_domains.append(
-                [
-                    ("location_id", "child_of", stock_location.id),
-                    ("location_dest_id", "=", reanalysis_quality_location.id),
-                ]
-            )
-            detail_domains.append(
-                [
-                    ("location_id", "=", reanalysis_quality_location.id),
-                    ("location_dest_id", "child_of", stock_location.id),
-                ]
-            )
-
-        if stock_location and rejected_location:
-            detail_domains.append(
-                [
-                    ("location_id", "child_of", stock_location.id),
-                    ("location_dest_id", "=", rejected_location.id),
-                ]
-            )
-
-        if reanalysis_quality_location and rejected_location:
-            detail_domains.append(
-                [
-                    ("location_id", "=", reanalysis_quality_location.id),
-                    ("location_dest_id", "=", rejected_location.id),
-                ]
-            )
+        if rejected_ids:
+            detail_domains.append([("location_id", "in", rejected_ids)])
+            detail_domains.append([("location_dest_id", "in", rejected_ids)])
 
         if not detail_domains:
             return expression.AND([base_domain, [("id", "=", 0)]])
