@@ -18,6 +18,7 @@ class StockMoveLine(models.Model):
     pharmadus_lot_movement_type = fields.Selection(
         selection=[
             ("entry", "ENTRADA"),
+            ("production", "PRODUCCIÓN"),
             ("approved", "APROBADO"),
             ("rejected", "RECHAZADO"),
             ("reanalysis", "REANÁLISIS"),
@@ -116,7 +117,12 @@ class StockMoveLine(models.Model):
         for line in self:
             origin = line.location_id.id
             destiny = line.location_dest_id.id
-            if origin == location_ids.get("entry") and destiny in quality_child_ids:
+            if (
+                line.location_id.usage == "production"
+                or line.location_dest_id.usage == "production"
+            ):
+                movement_type = "production"
+            elif origin == location_ids.get("entry") and destiny in quality_child_ids:
                 movement_type = "entry"
             elif origin in quality_child_ids and destiny in stock_child_ids:
                 movement_type = "approved"

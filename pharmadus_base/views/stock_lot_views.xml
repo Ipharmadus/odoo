@@ -104,11 +104,13 @@
                     name="pharmadus_lot_movement_type"
                     widget="badge"
                     optional="show"
+                    width="120px"
                     column_invisible="not context.get('pharmadus_show_lot_details')"
                     decoration-info="pharmadus_lot_movement_type == 'entry'"
                     decoration-success="pharmadus_lot_movement_type == 'approved'"
                     decoration-danger="pharmadus_lot_movement_type == 'rejected'"
                     decoration-primary="pharmadus_lot_movement_type == 'reanalysis'"
+                    decoration-warning="pharmadus_lot_movement_type == 'production'"
                 />
             </xpath>
         </field>
