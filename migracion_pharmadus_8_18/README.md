@@ -19,6 +19,9 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/migrate_lot_sequences.py`: asigna a los productos de Odoo 18 el secuenciador de lote que tienen en Odoo 8 (`product.template.sequence_id` → `lot_sequence_id`), creando en destino las secuencias que falten.
 - `scripts/fix_legacy_crons.py`: repara crones y workflows heredados de la migración (nombres de cron desincronizados, crones obsoletos de `queue_job`, filtros de `sale_automatic_workflow` y código de crones con API antigua).
 - `scripts/propagate_lot_expiry_dates.py`: lleva a los lotes la caducidad configurada en el producto (caducidad y consumo preferente), tratando aparte las fechas marcador de «no caduca».
+- `scripts/migrate_bookmarks.py`: copia los marcadores del módulo `bookmark` de un usuario
+  entre dos bases (devel → Comunitea), resolviendo por xmlid la acción, el menú y la vista de
+  búsqueda, y traduciendo por nombre completo las ubicaciones que aparecen en los filtros.
 - `scripts/migrate_lot_packaging.py`: lleva a los lotes el tipo de envase, el número de envases y los pallets de SIGI (`container_type`, `container_number`, `pallets`) a la pestaña «Recepción» de Odoo 18 (`pharmadus_packaging_type_id`, `pharmadus_package_count`, `pharmadus_pallet_count`).
 
 ## Requisitos
@@ -891,3 +894,30 @@ Resultado en desarrollo (2026-10-29), sobre 12.810 lotes con tipo de envase en S
 Aviso: los albaranes impresos leen estos datos de `stock.move.line`, no del lote. Esta migración no
 toca las líneas de movimiento, así que los albaranes históricos se siguen imprimiendo sin envases;
 solo los nuevos, creados con el asistente de lotes, los llevan.
+
+## Marcadores de usuario
+
+`scripts/migrate_bookmarks.py` lleva los marcadores del módulo `bookmark` de un usuario de una
+base a otra. No vale exportar e importar un CSV: el marcador guarda la acción y el menú como
+referencias numéricas, y sus «chips» de búsqueda (`search.history`) llevan en el dominio ids de
+ubicación que tampoco tienen por qué coincidir (en producción `CY01/Rechazado Calidad` es 263 y en
+desarrollo 260).
+
+El script, por cada marcador del usuario:
+
+- resuelve la acción y el menú por xmlid en origen y los vuelve a resolver en destino;
+- copia los chips resolviendo el modelo por nombre, la vista de búsqueda por xmlid y las
+  ubicaciones de los dominios por `complete_name`, dejando el resto del filtro intacto;
+- es idempotente: si el usuario ya tiene ese marcador (mismo nombre y acción), lo salta.
+
+```bash
+python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
+  --user sandra.garcia@pharmadus.com
+
+python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
+  --user sandra.garcia@pharmadus.com --write
+```
+
+Simulación sobre los dos marcadores de `sandra.garcia` (2026-10-30): «Quants» → `stock.quant` con
+2 chips y «Movimientos pendientes» → `stock.move.line` con 3 chips; ubicaciones traducidas
+66→66, 95→95 y 260→263.
