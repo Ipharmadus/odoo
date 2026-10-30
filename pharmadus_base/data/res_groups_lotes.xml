@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- El volcado de SIGI trajo el grupo de lotes implicado en `base.group_user`
+         pero no en `base.group_portal`. Los ajustes de característica se leen
+         con `all(implied_group in group.implied_ids for group in groups)` sobre
+         TODOS los grupos que ven el campo, que en "Lotes y numeros de serie" son
+         usuario y portal; con el portal sin la relacion, la casilla salia
+         desmarcada aunque los lotes funcionen. Y como el bloque de caducidad de
+         los ajustes de inventario depende de ella, al abrir Ajustes Odoo
+         proponia desinstalar product_expiry y sus dependientes (Pharmadus Base,
+         Stock Lot State, GTIN product codes, ...).
+
+         Esto es exactamente lo que hace Odoo al marcar la casilla
+         (`groups._apply_group`), asi que se deja igual en el repositorio para
+         que valga tambien en produccion. -->
+    <record id="base.group_portal" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('stock.group_production_lot'))]"/>
+    </record>
+</odoo>
