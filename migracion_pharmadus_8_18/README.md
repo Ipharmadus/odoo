@@ -19,10 +19,9 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/migrate_lot_sequences.py`: asigna a los productos de Odoo 18 el secuenciador de lote que tienen en Odoo 8 (`product.template.sequence_id` → `lot_sequence_id`), creando en destino las secuencias que falten.
 - `scripts/fix_legacy_crons.py`: repara crones y workflows heredados de la migración (nombres de cron desincronizados, crones obsoletos de `queue_job`, filtros de `sale_automatic_workflow` y código de crones con API antigua).
 - `scripts/propagate_lot_expiry_dates.py`: lleva a los lotes la caducidad configurada en el producto (caducidad y consumo preferente), tratando aparte las fechas marcador de «no caduca».
-- `scripts/migrate_bookmarks.py`: copia los marcadores del módulo `bookmark` de un usuario
-  entre dos bases (devel → Comunitea), resolviendo por xmlid la acción, el menú y la vista de
-  búsqueda, y traduciendo por nombre completo las ubicaciones que aparecen en los filtros.
-- `scripts/migrate_lot_packaging.py`: lleva a los lotes el tipo de envase, el número de envases y los pallets de SIGI (`container_type`, `container_number`, `pallets`) a la pestaña «Recepción» de Odoo 18 (`pharmadus_packaging_type_id`, `pharmadus_package_count`, `pharmadus_pallet_count`).
+- `scripts/create_bookmarks.py`: crea los marcadores del módulo `bookmark` (los dos de
+  «Quants» y «Movimientos pendientes») para `sandra.garcia` y `javier.decastro`, con sus
+  chips de búsqueda ya resueltas.
 
 ## Requisitos
 
@@ -897,40 +896,34 @@ solo los nuevos, creados con el asistente de lotes, los llevan.
 
 ## Marcadores de usuario
 
-`scripts/migrate_bookmarks.py` lleva los marcadores del módulo `bookmark` de un usuario de una
-base a otra. No vale exportar e importar un CSV: el marcador guarda la acción y el menú como
-referencias numéricas, y sus «chips» de búsqueda (`search.history`) llevan en el dominio ids de
-ubicación que tampoco tienen por qué coincidir (en producción `CY01/Rechazado Calidad` es 263 y en
-desarrollo 260).
+`scripts/create_bookmarks.py` **crea** los marcadores del módulo `bookmark` para
+`sandra.garcia@pharmadus.com` y `javier.decastro@pharmadus.com`. No los migra de otra base: los dos
+marcadores están definidos en el propio script y se crean tal cual en la base indicada (por defecto
+producción), así que no depende de que devel los tenga ni de que sus ids coincidan.
 
-El script, por cada marcador del usuario:
+| Marcador | Modelo | Acción | Chips |
+| --- | --- | --- | --- |
+| Quants | `stock.quant` | `stock.dashboard_open_quants` | filtro por ubicación + agrupado por ubicación |
+| Movimientos pendientes | `stock.move.line` | `stock.stock_move_line_action` (menú `stock.menu_stock_root`) | filtro «Pendiente» + agrupado por ubicación + filtro por ubicación de origen |
 
-- resuelve la acción y el menú por xmlid en origen y los vuelve a resolver en destino;
-- copia los chips resolviendo el modelo por nombre, la vista de búsqueda por xmlid y las
-  ubicaciones de los dominios por `complete_name`, dejando el resto del filtro intacto;
-- los chips se quedan con el usuario que recibe el marcador: `search.history` lleva su propia
-  lista de usuarios y el módulo tiene una regla de registro que solo los enseña a esos usuarios.
-  Sin rellenarla, el marcador se abre sin filtros (solo lo ve el administrador);
-- es idempotente: si el usuario ya tiene ese marcador (mismo nombre y acción), lo salta.
+Detalles que resuelve el script:
 
-Con `--from-user` se copian los marcadores de una persona a otra, creando copias propias (cada una
-se puede editar o borrar sin afectar a la otra).
+- **Ubicaciones por nombre**: los dominios llevan ubicaciones (`CY01/Control de calidad`,
+  `CY01/Devoluciones de Material`, `CY01/Rechazado Calidad`) que se buscan por `complete_name` en
+  destino, porque sus ids no coinciden entre bases (en producción la de rechazado es 263 y en
+  desarrollo 260).
+- **Acción, menú y vista de búsqueda** por xmlid.
+- **Chips con el usuario destinatario**: `search.history` tiene su propia lista de usuarios y una
+  regla de registro que solo los enseña a ellos; sin eso el marcador se abre sin filtros.
+- **Idempotente**: si el usuario ya tiene el marcador (mismo nombre y acción), lo salta.
 
 ```bash
-python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
-  --user sandra.garcia@pharmadus.com
-
-python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
-  --user sandra.garcia@pharmadus.com --write
-
-# los mismos marcadores, para otra persona
-python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
-  --user javier.decastro@pharmadus.com \
-  --from-user sandra.garcia@pharmadus.com --write
+python3 migracion_pharmadus_8_18/scripts/create_bookmarks.py            # simulación
+python3 migracion_pharmadus_8_18/scripts/create_bookmarks.py --write    # creación
 ```
 
+Con `--user` (repetible) se crean para otras personas, y con `--target` en otra base.
+
 Ejecutado el 2026-10-30 sobre producción: 2 marcadores y 5 chips para `sandra.garcia` (usuario 16)
-y los mismos 2 + 5 para `javier.decastro` (usuario 263), con los chips asignados a cada uno (los
-diez primeros se crearon sin usuarios y hubo que repararlos). «Quants» → `stock.quant` con 2 chips y
-«Movimientos pendientes» → `stock.move.line` con 3; ubicaciones traducidas 66→66, 95→95 y
-260→263 en `CY01/Rechazado Calidad`, comprobado en los dominios ya escritos.
+y los mismos 2 + 5 para `javier.decastro` (usuario 263). La definición del script se comparó chip a
+chip contra los originales de devel, sin diferencias.
