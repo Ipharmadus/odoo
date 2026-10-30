@@ -57,6 +57,8 @@ HISTORY_FIELDS = [
     "active",
     "model_id",
     "search_view_id",
+    "user_ids",
+    "favorite_id",
 ]
 LEAF = re.compile(r'\("([a-z_.]+)",\s*"(=|!=|in|not in)",\s*(\[[^\]]*\]|\d+)\)')
 
@@ -250,6 +252,23 @@ def run(argv=None):
     if mapa_ubicaciones:
         log("Ubicaciones traducidas: {}".format(mapa_ubicaciones))
 
+    # Los chips llevan su propia lista de usuarios y el modulo tiene una regla
+    # de registro que solo los muestra a esos usuarios: sin rellenarla, el
+    # marcador se abre sin filtros para quien lo usa.
+    logins_origen = {}
+    for rows in histories.values():
+        for row in rows:
+            logins_origen[row["id"]] = source.read("res.users", row["user_ids"], ["login"])
+
+    def target_users_for(row):
+        """Los chips se quedan con el usuario que recibe el marcador.
+
+        La regla de registro de `search.history` solo los muestra a los usuarios
+        de su lista, asi que si se copiaran los del origen (la persona de la
+        que se copian) el marcador se abriria sin filtros para quien lo usa.
+        """
+        return [user_target["id"]]
+
     existentes = target.search_read(
         "res.bookmark", [("user_ids", "in", [user_target["id"]])], fields=["name", "action_id"]
     )
@@ -272,6 +291,14 @@ def run(argv=None):
 
         chips = []
         for row in histories.get(bookmark["id"], []):
+            if row.get("favorite_id"):
+                log(
+                    "     AVISO: la chip {!r} es un filtro guardado (favorite) y no se "
+                    "copia; habrá que volver a guardarlo en destino".format(
+                        row["description"] or row["type"]
+                    )
+                )
+                continue
             search_view_xmlid = xmlid_of(source, "ir.ui.view", m2o_id(row["search_view_id"]))
             model = target.search_read("ir.model", [("model", "=", row["model"])], fields=["id"])
             if not model:
@@ -289,6 +316,7 @@ def run(argv=None):
                 "use_in_bookmark": row["use_in_bookmark"],
                 "active": row["active"],
                 "search_view_id": resolve_xmlid(target, search_view_xmlid) or False,
+                "user_ids": [(6, 0, target_users_for(row))],
             }
             chips.append(values)
 

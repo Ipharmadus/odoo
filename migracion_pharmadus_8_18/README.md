@@ -908,6 +908,9 @@ El script, por cada marcador del usuario:
 - resuelve la acción y el menú por xmlid en origen y los vuelve a resolver en destino;
 - copia los chips resolviendo el modelo por nombre, la vista de búsqueda por xmlid y las
   ubicaciones de los dominios por `complete_name`, dejando el resto del filtro intacto;
+- los chips se quedan con el usuario que recibe el marcador: `search.history` lleva su propia
+  lista de usuarios y el módulo tiene una regla de registro que solo los enseña a esos usuarios.
+  Sin rellenarla, el marcador se abre sin filtros (solo lo ve el administrador);
 - es idempotente: si el usuario ya tiene ese marcador (mismo nombre y acción), lo salta.
 
 Con `--from-user` se copian los marcadores de una persona a otra, creando copias propias (cada una
@@ -927,6 +930,7 @@ python3 migracion_pharmadus_8_18/scripts/migrate_bookmarks.py \
 ```
 
 Ejecutado el 2026-10-30 sobre producción: 2 marcadores y 5 chips para `sandra.garcia` (usuario 16)
-y los mismos 2 + 5 para `javier.decastro` (usuario 263). «Quants» → `stock.quant` con 2 chips y
+y los mismos 2 + 5 para `javier.decastro` (usuario 263), con los chips asignados a cada uno (los
+diez primeros se crearon sin usuarios y hubo que repararlos). «Quants» → `stock.quant` con 2 chips y
 «Movimientos pendientes» → `stock.move.line` con 3; ubicaciones traducidas 66→66, 95→95 y
 260→263 en `CY01/Rechazado Calidad`, comprobado en los dominios ya escritos.
