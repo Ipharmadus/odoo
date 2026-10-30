@@ -5,9 +5,11 @@ from odoo import api, fields, models
 
 ENTRY_LOCATION_XMLID = "stock.stock_location_company"
 STOCK_LOCATION_XMLID = "stock.stock_location_stock"
+QUALITY_ROOT_LOCATION_XMLID = "__export__.stock_location_95"
 QUALITY_RECEIPT_LOCATION_XMLID = "__export__.stock_location_14"
 QUALITY_REANALYSIS_LOCATION_XMLID = "__export__.stock_location_165"
 REJECTED_LOCATION_XMLID = "lot_states.stock_location_rejected"
+REJECTED_QUALITY_LOCATION_XMLID = "__export__.stock_location_166"
 
 
 class StockMoveLine(models.Model):
@@ -45,6 +47,9 @@ class StockMoveLine(models.Model):
     def _pharmadus_get_lot_detail_location_ids(self):
         entry_location = self.env.ref(ENTRY_LOCATION_XMLID, raise_if_not_found=False)
         stock_location = self.env.ref(STOCK_LOCATION_XMLID, raise_if_not_found=False)
+        quality_location = self.env.ref(
+            QUALITY_ROOT_LOCATION_XMLID, raise_if_not_found=False
+        )
         receipt_quality_location = self.env.ref(
             QUALITY_RECEIPT_LOCATION_XMLID, raise_if_not_found=False
         )
@@ -54,12 +59,17 @@ class StockMoveLine(models.Model):
         rejected_location = self.env.ref(
             REJECTED_LOCATION_XMLID, raise_if_not_found=False
         )
+        rejected_quality_location = self.env.ref(
+            REJECTED_QUALITY_LOCATION_XMLID, raise_if_not_found=False
+        )
         return {
             "entry": entry_location and entry_location.id or False,
             "stock": stock_location and stock_location.id or False,
+            "quality": quality_location and quality_location.id or False,
             "receipt_quality": receipt_quality_location and receipt_quality_location.id or False,
             "reanalysis_quality": reanalysis_quality_location and reanalysis_quality_location.id or False,
             "rejected": rejected_location and rejected_location.id or False,
+            "rejected_quality": rejected_quality_location and rejected_quality_location.id or False,
         }
 
     @api.depends(
@@ -73,44 +83,51 @@ class StockMoveLine(models.Model):
         "location_dest_id.warehouse_id",
     )
     def _compute_pharmadus_lot_movement_type(self):
+        """Tipo de movimiento del lote para la columna «Tipo mov.».
+
+        Se mira el árbol de ubicaciones, no una lista de parejas: cuenta como
+        calidad todo lo que cuelga de «Control de calidad» (recepción,
+        cuarentena, reanálisis y lo que se añada) y como rechazado tanto
+        «Rechazado» como «Rechazado Calidad». Antes solo se contemplaba
+        «Rechazado», así que los movimientos a «Rechazado Calidad» se quedaban
+        sin etiqueta.
+        """
         location_ids = self._pharmadus_get_lot_detail_location_ids()
         stock_location_id = location_ids.get("stock")
-        stock_child_ids = set()
-        if stock_location_id:
-            stock_child_ids = set(
-                self.env["stock.location"].search([("id", "child_of", stock_location_id)]).ids
+        quality_location_id = location_ids.get("quality")
+        rejected_ids = {
+            location_ids[key]
+            for key in ("rejected", "rejected_quality")
+            if location_ids.get(key)
+        }
+
+        def child_ids(location_id):
+            if not location_id:
+                return set()
+            return set(
+                self.env["stock.location"]
+                .search([("id", "child_of", location_id)])
+                .ids
             )
+
+        stock_child_ids = child_ids(stock_location_id)
+        quality_child_ids = child_ids(quality_location_id)
+
         for line in self:
-            movement_type = False
-            if (
-                line.location_id.id == location_ids.get("entry")
-                and line.location_dest_id.id == location_ids.get("receipt_quality")
-            ):
+            origin = line.location_id.id
+            destiny = line.location_dest_id.id
+            if origin == location_ids.get("entry") and destiny in quality_child_ids:
                 movement_type = "entry"
-            elif (
-                line.location_id.id == location_ids.get("receipt_quality")
-                and line.location_dest_id.id in stock_child_ids
-            ) or (
-                line.location_id.id == location_ids.get("reanalysis_quality")
-                and line.location_dest_id.id in stock_child_ids
-            ):
+            elif origin in quality_child_ids and destiny in stock_child_ids:
                 movement_type = "approved"
-            elif (
-                line.location_id.id == location_ids.get("receipt_quality")
-                and line.location_dest_id.id == location_ids.get("rejected")
-            ) or (
-                line.location_id.id == location_ids.get("reanalysis_quality")
-                and line.location_dest_id.id == location_ids.get("rejected")
-            ) or (
-                line.location_id.id in stock_child_ids
-                and line.location_dest_id.id == location_ids.get("rejected")
+            elif destiny in rejected_ids and (
+                origin in quality_child_ids or origin in stock_child_ids
             ):
                 movement_type = "rejected"
-            elif (
-                line.location_id.id in stock_child_ids
-                and line.location_dest_id.id == location_ids.get("reanalysis_quality")
-            ):
+            elif origin in stock_child_ids and destiny in quality_child_ids:
                 movement_type = "reanalysis"
+            else:
+                movement_type = False
             line.pharmadus_lot_movement_type = movement_type
 
     @api.model
