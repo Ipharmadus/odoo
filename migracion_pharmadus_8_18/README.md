@@ -22,6 +22,9 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/create_bookmarks.py`: crea los marcadores del módulo `bookmark` (los dos de
   «Quants» y «Movimientos pendientes») para `sandra.garcia` y `javier.decastro`, con sus
   chips de búsqueda ya resueltas.
+- `scripts/mark_bank_account_required.py`: marca la opción «Cuenta bancaria requerida»
+  (`account.payment.method.bank_account_required`) en todos los métodos de pago salientes de la base
+  de destino, archivados incluidos. No migra nada del origen: es un ajuste de configuración.
 
 ## Requisitos
 
@@ -927,3 +930,49 @@ Con `--user` (repetible) se crean para otras personas, y con `--target` en otra 
 Ejecutado el 2026-10-30 sobre producción: 2 marcadores y 5 chips para `sandra.garcia` (usuario 16)
 y los mismos 2 + 5 para `javier.decastro` (usuario 263). La definición del script se comparó chip a
 chip contra los originales de devel, sin diferencias.
+
+## Cuenta bancaria requerida en los métodos de pago salientes
+
+`scripts/mark_bank_account_required.py` marca la opción **«Cuenta bancaria requerida»**
+(`account.payment.method.bank_account_required`) en **todos los métodos de pago salientes** de la
+base de destino. No lee nada del origen: es un ajuste de configuración de Odoo 18, así que sirve
+igual para `devel` (`config.json`) que para Comunitea (`config.json.comunitea`, **producción**).
+
+- **Qué implica:** la opción la añade `account_payment_mode` (OCA) y la consume
+  `account_payment_order`. Con ella marcada, al confirmar una orden de pago (`draft2open`) se exige
+  la cuenta bancaria del **diario** (`journal_id.bank_account_id`) y la del **proveedor** en cada
+  línea (`payment_line.partner_bank_id`); si falta alguna, la confirmación falla con «Missing bank
+  account on bank journal» o «Missing Partner Bank Account».
+- **Qué marca:** los métodos con `payment_type = outbound`, **archivados incluidos**
+  (`active_test: False`): los archivados siguen colgados de órdenes y asientos antiguos y la opción
+  se evalúa al confirmarlas. Los entrantes no se tocan salvo que se pida `--payment-type
+  inbound|both`.
+- **Idempotente:** solo escribe los métodos que tienen la opción desmarcada y después relee la base
+  para comprobarlo. `--method-ids` limita la pasada a unos ids concretos.
+
+```bash
+# simulación (no escribe nada)
+python3 migracion_pharmadus_8_18/scripts/mark_bank_account_required.py \
+  --config migracion_pharmadus_8_18/config.json
+# escritura
+python3 migracion_pharmadus_8_18/scripts/mark_bank_account_required.py \
+  --config migracion_pharmadus_8_18/config.json.comunitea --write
+```
+
+Resultado del 2026-11-04: **11 métodos salientes** en cada base y los 11 marcados.
+
+| Base | Ya marcados | Marcados por el script | Métodos que faltaban |
+| --- | --- | --- | --- |
+| `devel` | 5 | 6 | `manual`, `check_printing`, `csb34`, `csb3401`, `conf_popular`, `confirming_aef` |
+| Comunitea (`prod`) | 7 | 4 | `manual`, `check_printing`, `csb34`, `csb3401` |
+
+Los cinco SEPA Credit Transfer (v02–v05 y `pain.001.003.03`) ya venían marcados en las dos bases.
+
+**Efecto a tener en cuenta en producción** (comprobado el 2026-11-04, tras la escritura): de los 29
+diarios de banco **14 no tienen cuenta bancaria** (p. ej. `BANCO SABADELL - 03 2011`, `Pagarés`,
+`Talones`, `Cheques`, `Devoluciones de efectos`), así que una orden con esos diarios ya no se podrá
+confirmar. Y de las **20 órdenes de pago en borrador** con método `manual` (`Pago Pro -
+Transferencia *`), **5 tienen alguna línea sin cuenta bancaria de proveedor** (`2025/062`,
+`2025/065`, `2025/145`, `2025/185` y `2025/273`; 11 líneas de 120): tampoco se confirmarán hasta
+rellenar el dato. Es justo lo que la opción pretende exigir, pero conviene repasar esas órdenes
+antes de confirmarlas. Volver atrás es desmarcar el campo en los métodos afectados.
