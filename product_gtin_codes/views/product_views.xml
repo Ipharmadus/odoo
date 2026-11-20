@@ -150,7 +150,8 @@
         <field name="model">product.gtin14.res.partner.rel</field>
         <field name="arch" type="xml">
             <list editable="bottom" create="false" delete="false">
-                <field name="gtin14_id" invisible="1"/>
+                <field name="gtin14_id" column_invisible="1"/>
+                <field name="gtin14" readonly="1"/>
                 <field name="partner_id" readonly="1"/>
                 <field name="units"/>
             </list>

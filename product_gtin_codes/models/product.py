@@ -223,6 +223,11 @@ class ProductGtin14ResPartnerRel(models.Model):
         ondelete="cascade",
         index=True,
     )
+    gtin14 = fields.Char(
+        related="gtin14_id.gtin14",
+        string="GTIN-14",
+        readonly=True,
+    )
     partner_id = fields.Many2one(
         comodel_name="res.partner",
         required=True,
