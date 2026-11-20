@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template id="report_apli_8">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="num_packs" t-value="o.pharmadus_total_packages or 0"/>
+                <t t-set="pages_to_print"
+                   t-value="(num_packs // 8) + (1 if num_packs % 8 > 0 else 0)"/>
+                <t t-foreach="range(pages_to_print)" t-as="page_loop">
+                    <t t-set="labels_left" t-value="num_packs - page_loop * 8"/>
+                    <t t-set="labels_to_print"
+                       t-value="8 if labels_left > 7 else labels_left"/>
+                    <div class="page">
+                        <style type="text/css">
+                            .t-column {
+                                height: 325px;
+                                width: 50%;
+                                float: left;
+                            }
+                            .t-separator {
+                                height: 100%;
+                                width: 20px;
+                                float: left;
+                            }
+                            .t-column p {
+                                font-size: 22px;
+                                line-height: 15px;
+                            }
+                            .tag-container {
+                                padding-top: 15%;
+                                padding-left: 4px;
+                                margin-top: 3px;
+                                float: left;
+                            }
+                        </style>
+                        <t t-foreach="range(labels_to_print)" t-as="col">
+                            <div class="t-column">
+                                <div t-if="col % 2 > 0" class="t-separator"/>
+                                <div class="tag-container">
+                                    <p><strong>SUCURSAL:
+                                        <span t-out="o.sale_id.customer_branch or ''"/>
+                                    </strong></p>
+                                    <p><strong>DEPARTAMENTO:
+                                        <span t-out="o.sale_id.customer_department or ''"/>
+                                    </strong></p>
+                                    <p><strong>Nº PEDIDO:
+                                        <span t-out="o.sale_id.client_order_ref or ''"/>
+                                    </strong></p>
+                                    <p><strong>Nº ALBARAN:
+                                        <span t-out="o.name"/>
+                                    </strong></p>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="paperformat_apli_8" model="report.paperformat">
+        <field name="name">Etiquetas de 8 (A4)</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_apli_8" model="ir.actions.report">
+        <field name="name">Etiquetas de 8</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_edi_reports.report_apli_8</field>
+        <field name="report_file">pharmadus_edi_reports.report_apli_8</field>
+        <field name="print_report_name">'Etiquetas Apli - %s' % (object.name or '')</field>
+        <field name="paperformat_id" ref="paperformat_apli_8"/>
+    </record>
+
+    <record id="paperformat_tags_4" model="report.paperformat">
+        <field name="name">Etiquetas de 4 (A6)</field>
+        <field name="default" eval="False"/>
+        <field name="format">A6</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">1</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_tags_4" model="ir.actions.report">
+        <field name="name">Etiquetas de 4</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_edi_reports.report_tags_4</field>
+        <field name="report_file">pharmadus_edi_reports.report_tags_4</field>
+        <field name="print_report_name">'Etiquetas - %s' % (object.name or '')</field>
+        <field name="paperformat_id" ref="paperformat_tags_4"/>
+    </record>
+
+    <record id="paperformat_eci" model="report.paperformat">
+        <field name="name">Informe ECI (A4)</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">1</field>
+        <field name="margin_bottom">1</field>
+        <field name="margin_left">1</field>
+        <field name="margin_right">1</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">35</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_eci" model="ir.actions.report">
+        <field name="name">Informe ECI</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_edi_reports.corte_ingles_report</field>
+        <field name="report_file">pharmadus_edi_reports.corte_ingles_report</field>
+        <field name="print_report_name">'Informe ECI - %s' % (object.name or '')</field>
+        <field name="paperformat_id" ref="paperformat_eci"/>
+    </record>
+</odoo>

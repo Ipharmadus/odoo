@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="view_picking_form_edi_buttons" model="ir.ui.view">
+        <field name="name">stock.picking.form.edi.buttons</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="edi_desadv" invisible="1"/>
+            </xpath>
+            <xpath expr="//header/button[@name='do_print_picking']" position="after">
+                <button name="action_print_apli_8"
+                        string="Etiq. de 8"
+                        type="object"
+                        invisible="picking_type_code != 'outgoing' or state != 'done' or not edi_desadv"/>
+                <button name="action_print_tags_4"
+                        string="Etiq. de 4"
+                        type="object"
+                        invisible="picking_type_code != 'outgoing' or state != 'done' or not edi_desadv"/>
+                <button name="action_print_eci_report"
+                        string="Informe ECI"
+                        type="object"
+                        invisible="picking_type_code != 'outgoing' or state != 'done' or not edi_desadv"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template id="report_tags_4">
+        <t t-call="web.html_container">
+            <style type="text/css">
+                #container{
+                    height: 369mm;
+                    width:100%;
+                    position:relative;
+                    border-style: solid 1px;;
+                }
+                .tag-block{
+                    height: 42%;
+                    width: 84%;
+                    float: left;
+                    margin-top: 60px;
+                    margin-left: 35px;
+                    page-break-inside: avoid !important;
+                }
+                .tag-block.palet {
+                    padding-top: 30px;
+                }
+                .table-content{
+                    width: 100%;
+                    height:65%;
+                 }
+                .tag-table{
+                    height: 100%;
+                    width: 100%;
+                    border-collapse: collapse;
+                    border: 1px solid #000;
+                }
+                .tag-table tr{
+                    height:33%;
+                }
+                .tag-table td.td-head{
+                    vertical-align:top;
+                    padding:4px
+                }
+                .tag-table td.td-left-top{
+                    width: 30%;
+                    border: 1px solid #000;
+                    vertical-align:top;
+                    padding:4px
+                }
+                .tag-table td.td-left{
+                    width: 30%;
+                    border: 1px solid #000;
+                    vertical-align:middle;
+                    padding:4px
+                }
+                .tag-table td.td-right-top{
+                    width: 70%;
+                    border: 1px solid #000;
+                    vertical-align:top;
+                    text-align: center;
+                    padding:4px
+                }
+                .tag-table td.td-right{
+                    width: 70%;
+                    border: 1px solid #000;
+                    vertical-align:middle;
+                    text-align: center;
+                    padding:4px
+                }
+                .barcode-content{
+                    width: 100%;
+                    display: table;
+                }
+                .bc-center{
+                    height: 180px !important;
+                    overflow: hidden;
+                    text-align:center;
+                    padding: 20px 0 0 0;
+                    margin: 0;
+                }
+                .tag-table2{
+                    height: 100%;
+                    border-collapse: collapse;
+                    border: 1px solid #000;
+                }
+                .tag-table2 tr.tr-1{
+                    height:15%;
+                }
+                .tag-table2 tr.tr-2{
+                    height:25%;
+                }
+                .tag-table2 tr.tr-3{
+                    height:40%;
+                }
+                .tag-table2 tr.tr-4{
+                    height:20%;
+                }
+                .tag-table2 td{
+                    border: 1px solid #000;
+                    vertical-align:middle;
+                    text-align: center;
+                }
+                .tag-table2 td.td-left{
+                    width: 80%;
+                    border: 1px solid #000;
+                    vertical-align:middle;
+                    text-align: center;
+                    padding:4px
+                }
+                .tag-table2 td.td-right{
+                    width: 20%;
+                    border: 1px solid #000;
+                    vertical-align:middle;
+                    text-align: center;
+                    padding:4px
+                }
+            </style>
+
+            <t t-set="GS1_128_SSCC" t-value="u'\xf100'"/>
+            <t t-set="GS1_128_GTIN" t-value="u'\xf101'"/>
+
+            <t t-foreach="docs" t-as="o">
+                <t t-set="data" t-value="o._pharmadus_edi_tags_data()"/>
+                <t t-set="package_dic" t-value="data['package_dic']"/>
+                <t t-set="palet_dic" t-value="data['palet_dic']"/>
+                <t t-set="num_palets" t-value="data['num_palets']"/>
+                <!-- ETIQUETAS DE BULTO -->
+                <div class="page">
+                    <div id="container">
+                        <t t-foreach="package_dic" t-as="product">
+                            <t t-foreach="package_dic[product]" t-as="pack_tag">
+                                <div class="tag-block">
+                                    <div class="table-content">
+                                        <table t-att-class="'tag-table ' + pack_tag['table-class']">
+                                            <tr>
+                                                <td class="td-head" colspan="2">
+                                                    <p>
+                                                        <strong>
+                                                            PHARMADUS BOTANICALS, S.L.<br/>
+                                                            POL. IND. CAMPONARAYA SECTOR 2 PARCELA 3<br/>
+                                                            24410 CAMPONARAYA (LEÓN)
+                                                        </strong>
+                                                    </p>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                               <td class="td-left-top">
+                                                <p><strong>DESCRIPCIÓN</strong></p>
+                                                </td>
+                                               <td class="td-right-top">
+                                                <p>
+                                                <t t-out="pack_tag['description']"/>
+                                                </p>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                               <td class="td-left">
+                                                   <p><strong>Nº DE SERIE</strong></p>
+                                                   <p><strong>Nº DE LOTE</strong></p>
+                                                   <p><strong>Nº UNIDADES</strong></p>
+                                               </td>
+                                               <td class="td-right">
+                                                    <p><t t-out="pack_tag['serial_number']"/></p>
+                                                    <p><t t-out="pack_tag['lot']"/></p>
+                                                    <p><t t-out="pack_tag['num_units']"/></p>
+                                               </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <div class="barcode-content">
+                                        <div class="bc-center">
+                                            <t t-set="barcode" t-value="pack_tag['barcode']"/>
+                                            <img t-att-src="'data:image/png;base64,%s' % o._pharmadus_edi_barcode(GS1_128_GTIN + barcode)" style="width:400px;height:130px; margin-left: -25px;"/>
+                                            <p class="text-center" t-out="barcode"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+                    </div>
+                </div>
+
+                <!-- ETIQUETAS DE PALET -->
+                <div class="page">
+                    <div id="container">
+                        <t t-foreach="palet_dic" t-as="palet">
+                            <t t-set="palet_tag" t-value="palet_dic[palet]"/>
+                            <t t-foreach="range(2)" t-as="palet_copy">
+                                <div class="tag-block">
+                                    <div class="table-content">
+                                        <table class="tag-table2 table-1">
+                                            <tr class="tr-1">
+                                                <td class="td-head" colspan="2">
+                                                    <p><strong>PHARMADUS BOTANICALS, S.L.</strong></p>
+                                                </td>
+                                            </tr>
+
+                                            <tr class="tr-2">
+                                                <td class="td-head" colspan="2">
+                                                    <p>
+                                                        <strong>
+                                                            POL. IND. CAMPONARAYA SECTOR 2 PARCELA 3<br/>
+                                                            24410 CAMPONARAYA (LEÓN)
+                                                        </strong>
+                                                    </p>
+                                                </td>
+                                            </tr>
+
+                                            <tr class="tr-3">
+                                                <td class="td-head" colspan="2">
+                                                    <p style="text-align:left;vertical-align:top;padding:4px;"> LUGAR ENTREGA </p>
+                                                    <p><strong><t t-out="palet_tag['place']"/></strong></p>
+                                                    <p><t t-out="palet_tag['place_dir']"/></p>
+                                                </td>
+                                            </tr>
+
+                                            <tr class="tr-4">
+                                                <td class="td-left">
+                                                    <p><strong>Nº TOTAL DE PALETS</strong></p>
+                                                    <p style="font-size:30px;"><strong><t t-out="num_palets"/></strong></p>
+                                                </td>
+                                                 <td class="td-right">
+                                                    <p style="font-size:30px;"><strong><t t-out="palet_tag['palet_number']"/>/<t t-out="num_palets"/></strong>
+                                                    </p>
+                                                </td>
+                                            </tr>
+
+                                        </table>
+                                    </div>
+                                    <div class="barcode-content">
+                                        <t t-set="sscc" t-value="palet_tag['sscc']"/>
+                                        <div class="bc-center">
+                                            <img t-att-src="'data:image/png;base64,%s' % o._pharmadus_edi_barcode(GS1_128_SSCC + sscc)" style="width:400px;height:130px; margin-left: -20px;"/>
+                                            <p class="text-center" t-out="'(00)' + sscc"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>
