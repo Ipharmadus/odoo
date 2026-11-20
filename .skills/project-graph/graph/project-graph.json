@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-10-20T09:53:10+00:00",
+  "generated_at": "2026-11-20T12:23:48+00:00",
   "repo_root": "/opt/pharmadus/odoo/custom/src/pharmadus",
   "addons": {
     "pharmadus_base": {
       "path": "pharmadus_base",
       "manifest": {
         "name": "Pharmadus Base",
-        "version": "18.0.1.0.0",
+        "version": "18.0.1.1.0",
         "depends": [
           "base",
           "mail",
@@ -48,6 +48,8 @@
           "data/pharmadus_product_specification_data.xml",
           "report/sale_transfer_report_templates.xml",
           "data/mail_template_sale_transfer.xml",
+          "data/website_login_backend.xml",
+          "data/res_groups_lotes.xml",
           "views/stock_lot_wizard_views.xml"
         ],
         "assets": {
@@ -60,6 +62,18 @@
         "post_init_hook": ""
       },
       "models": [
+        {
+          "class": "IrActionsReport",
+          "file": "pharmadus_base/models/ir_actions_report.py",
+          "line": 6,
+          "name": null,
+          "inherit": "ir.actions.report",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
         {
           "class": "IrModelData",
           "file": "pharmadus_base/models/ir_model_data.py",
@@ -322,7 +336,7 @@
         {
           "class": "StockLot",
           "file": "pharmadus_base/models/stock_lot.py",
-          "line": 15,
+          "line": 19,
           "name": null,
           "inherit": "stock.lot",
           "inherits": null,
@@ -359,7 +373,7 @@
         {
           "class": "StockMoveLine",
           "file": "pharmadus_base/models/stock_move_line.py",
-          "line": 13,
+          "line": 15,
           "name": null,
           "inherit": "stock.move.line",
           "inherits": null,
@@ -505,6 +519,30 @@
             {
               "id": "pharmadus_product_garment_desnuda",
               "model": "pharmadus.product.garment"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/data/res_groups_lotes.xml",
+          "records": [
+            {
+              "id": "base.group_portal",
+              "model": "res.groups"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_base/data/website_login_backend.xml",
+          "records": [
+            {
+              "id": "website.login_layout",
+              "model": "ir.ui.view"
             }
           ],
           "menus": [],
@@ -1035,7 +1073,19 @@
               "model": "ir.ui.view"
             },
             {
+              "id": "view_product_template_form_pharmadus_cn_code",
+              "model": "ir.ui.view"
+            },
+            {
               "id": "view_product_template_form_pharmadus_tags_below_barcode",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_product_variant_form_pharmadus_cn_code",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_product_variant_form_pharmadus_tags_below_barcode",
               "model": "ir.ui.view"
             }
           ],
@@ -1189,6 +1239,10 @@
               "model": "ir.ui.view"
             },
             {
+              "id": "view_move_line_tree_pharmadus_hide_line_date",
+              "model": "ir.ui.view"
+            },
+            {
               "id": "view_stock_lot_form_pharmadus_transfers",
               "model": "ir.ui.view"
             },
@@ -1297,7 +1351,7 @@
             "id",
             "name"
           ],
-          "rows": 14,
+          "rows": 15,
           "models": []
         },
         {
@@ -1491,6 +1545,723 @@
       ],
       "csv": []
     },
+    "pharmadus_edi_reports": {
+      "path": "pharmadus_edi_reports",
+      "manifest": {
+        "name": "Pharmadus EDI Reports",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "pharmadus_stock_shipping",
+          "product_gtin_codes",
+          "sale"
+        ],
+        "data": [
+          "views/res_partner_views.xml",
+          "views/sale_order_views.xml",
+          "views/stock_picking_views.xml",
+          "report/report_apli_8.xml",
+          "report/report_tags_4.xml",
+          "report/report_eci.xml",
+          "report/report_actions.xml"
+        ],
+        "assets": {},
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": ""
+      },
+      "models": [
+        {
+          "class": "ResPartner",
+          "file": "pharmadus_edi_reports/models/res_partner.py",
+          "line": 6,
+          "name": null,
+          "inherit": "res.partner",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "SaleOrder",
+          "file": "pharmadus_edi_reports/models/sale_order.py",
+          "line": 6,
+          "name": null,
+          "inherit": "sale.order",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "res.partner"
+          ]
+        },
+        {
+          "class": "StockPicking",
+          "file": "pharmadus_edi_reports/models/stock_picking.py",
+          "line": 9,
+          "name": null,
+          "inherit": "stock.picking",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        }
+      ],
+      "xml": [
+        {
+          "file": "pharmadus_edi_reports/report/report_actions.xml",
+          "records": [
+            {
+              "id": "paperformat_apli_8",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_apli_8",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "paperformat_tags_4",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_tags_4",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "paperformat_eci",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_eci",
+              "model": "ir.actions.report"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_edi_reports/report/report_apli_8.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_apli_8"
+          ]
+        },
+        {
+          "file": "pharmadus_edi_reports/report/report_eci.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "corte_ingles_report"
+          ]
+        },
+        {
+          "file": "pharmadus_edi_reports/report/report_tags_4.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_tags_4"
+          ]
+        },
+        {
+          "file": "pharmadus_edi_reports/views/res_partner_views.xml",
+          "records": [
+            {
+              "id": "view_partner_form_edi",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_edi_reports/views/sale_order_views.xml",
+          "records": [
+            {
+              "id": "view_sale_order_form_edi",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_edi_reports/views/stock_picking_views.xml",
+          "records": [
+            {
+              "id": "view_picking_form_edi_buttons",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": []
+    },
+    "pharmadus_stock_shipping": {
+      "path": "pharmadus_stock_shipping",
+      "manifest": {
+        "name": "Pharmadus Stock Shipping",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "pharmadus_base",
+          "product_gtin_codes",
+          "report_xlsx",
+          "stock_delivery"
+        ],
+        "data": [
+          "security/ir.model.access.csv",
+          "views/pharmadus_split_line_views.xml",
+          "views/stock_move_line_views.xml",
+          "views/stock_picking_views.xml",
+          "views/product_template_views.xml",
+          "views/sale_order_views.xml",
+          "views/res_company_views.xml",
+          "views/res_partner_views.xml",
+          "views/pharmadus_palet_labels_wizard_views.xml",
+          "views/pharmadus_picking_shortage_views.xml",
+          "views/pharmadus_expeditions_views.xml",
+          "report/report_delivery_note.xml",
+          "report/report_internal_picking.xml",
+          "report/report_labels.xml",
+          "report/report_palet_labels_gs1.xml",
+          "report/report_expedition.xml",
+          "report/report_actions.xml"
+        ],
+        "assets": {
+          "web.assets_backend": [
+            "pharmadus_stock_shipping/static/src/js/split_button.js",
+            "pharmadus_stock_shipping/static/src/js/pick_from_lot_first.js",
+            "pharmadus_stock_shipping/static/src/xml/split_button.xml"
+          ]
+        },
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": "post_init_hook"
+      },
+      "models": [
+        {
+          "class": "PharmadusPickingBulto",
+          "file": "pharmadus_stock_shipping/models/pharmadus_picking_bulto.py",
+          "line": 6,
+          "name": "pharmadus.picking.bulto",
+          "inherit": null,
+          "inherits": null,
+          "description": "Bulto de expedición",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "product.product",
+            "stock.picking"
+          ]
+        },
+        {
+          "class": "PharmadusSscc",
+          "file": "pharmadus_stock_shipping/models/pharmadus_sscc.py",
+          "line": 6,
+          "name": "pharmadus.sscc",
+          "inherit": null,
+          "inherits": null,
+          "description": "SSCC de expedición",
+          "transient": null,
+          "field_types": [
+            "Many2many",
+            "Many2one",
+            "One2many"
+          ],
+          "comodels": [
+            "pharmadus.sscc",
+            "stock.move.line",
+            "stock.picking"
+          ]
+        },
+        {
+          "class": "ProductTemplate",
+          "file": "pharmadus_stock_shipping/models/product_template.py",
+          "line": 6,
+          "name": null,
+          "inherit": "product.template",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ResCompany",
+          "file": "pharmadus_stock_shipping/models/res_company.py",
+          "line": 6,
+          "name": null,
+          "inherit": "res.company",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ResPartner",
+          "file": "pharmadus_stock_shipping/models/res_partner.py",
+          "line": 6,
+          "name": null,
+          "inherit": "res.partner",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "SaleOrder",
+          "file": "pharmadus_stock_shipping/models/sale_order.py",
+          "line": 6,
+          "name": null,
+          "inherit": "sale.order",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockMoveLine",
+          "file": "pharmadus_stock_shipping/models/stock_move_line.py",
+          "line": 9,
+          "name": null,
+          "inherit": "stock.move.line",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "StockPicking",
+          "file": "pharmadus_stock_shipping/models/stock_picking.py",
+          "line": 11,
+          "name": null,
+          "inherit": "stock.picking",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one",
+            "One2many"
+          ],
+          "comodels": [
+            "pharmadus.picking.bulto",
+            "pharmadus.sscc",
+            "res.country.state",
+            "res.currency"
+          ]
+        },
+        {
+          "class": "StockQuant",
+          "file": "pharmadus_stock_shipping/models/stock_quant.py",
+          "line": 6,
+          "name": null,
+          "inherit": "stock.quant",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusExpeditionXlsx",
+          "file": "pharmadus_stock_shipping/report/report_expedition_xlsx.py",
+          "line": 6,
+          "name": "report.pharmadus_stock_shipping.expedition_xlsx",
+          "inherit": "report.report_xlsx.abstract",
+          "inherits": null,
+          "description": "Expediciones en Excel",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "PharmadusPaletLabelsWizard",
+          "file": "pharmadus_stock_shipping/wizard/pharmadus_palet_labels_wizard.py",
+          "line": 6,
+          "name": "pharmadus.palet.labels.wizard",
+          "inherit": null,
+          "inherits": null,
+          "description": "Imprimir etiquetas de palet",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "stock.picking"
+          ]
+        },
+        {
+          "class": "PharmadusPickingShortageWizard",
+          "file": "pharmadus_stock_shipping/wizard/pharmadus_picking_shortage.py",
+          "line": 6,
+          "name": "pharmadus.picking.shortage.wizard",
+          "inherit": null,
+          "inherits": null,
+          "description": "Aviso de existencias insuficientes",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "stock.picking"
+          ]
+        },
+        {
+          "class": "PharmadusSplitLine",
+          "file": "pharmadus_stock_shipping/wizard/pharmadus_split_line.py",
+          "line": 8,
+          "name": "pharmadus.split.line",
+          "inherit": null,
+          "inherits": null,
+          "description": "Dividir línea de detalle",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "stock.move.line"
+          ]
+        }
+      ],
+      "xml": [
+        {
+          "file": "pharmadus_stock_shipping/report/report_actions.xml",
+          "records": [
+            {
+              "id": "paperformat_container_labels",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "paperformat_palet_labels",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "paperformat_delivery_note",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_delivery_note",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_bulto_labels",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_palet_labels",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_palet_labels_gs1",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "paperformat_expedition_report",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_expedition",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "paperformat_internal_picking",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_internal_picking",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_expedition_xlsx",
+              "model": "ir.actions.report"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/report/report_delivery_note.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_delivery_note"
+          ]
+        },
+        {
+          "file": "pharmadus_stock_shipping/report/report_expedition.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_expedition"
+          ]
+        },
+        {
+          "file": "pharmadus_stock_shipping/report/report_internal_picking.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_internal_picking"
+          ]
+        },
+        {
+          "file": "pharmadus_stock_shipping/report/report_labels.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_bulto_labels",
+            "report_palet_labels"
+          ]
+        },
+        {
+          "file": "pharmadus_stock_shipping/report/report_palet_labels_gs1.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "report_palet_labels_gs1_128"
+          ]
+        },
+        {
+          "file": "pharmadus_stock_shipping/static/src/xml/split_button.xml",
+          "records": [],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/pharmadus_expeditions_views.xml",
+          "records": [
+            {
+              "id": "view_pharmadus_expeditions_tree",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_pharmadus_expeditions_search",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_pharmadus_expeditions",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "stock.menu_stock_warehouse_mgmt",
+              "model": "ir.ui.menu"
+            }
+          ],
+          "menus": [
+            {
+              "id": "menu_pharmadus_warehouse_ops",
+              "name": "Operaciones de almacén",
+              "parent": "stock.menu_stock_root",
+              "action": "",
+              "groups": "stock.group_stock_user",
+              "sequence": "3"
+            },
+            {
+              "id": "menu_pharmadus_warehouse_receipts",
+              "name": "Recepciones",
+              "parent": "menu_pharmadus_warehouse_ops",
+              "action": "stock.action_picking_tree_incoming",
+              "groups": "",
+              "sequence": "1"
+            },
+            {
+              "id": "menu_pharmadus_warehouse_deliveries",
+              "name": "Entregas",
+              "parent": "menu_pharmadus_warehouse_ops",
+              "action": "stock.action_picking_tree_outgoing",
+              "groups": "",
+              "sequence": "2"
+            },
+            {
+              "id": "menu_pharmadus_warehouse_internal",
+              "name": "Interno",
+              "parent": "menu_pharmadus_warehouse_ops",
+              "action": "stock.action_picking_tree_internal",
+              "groups": "",
+              "sequence": "3"
+            },
+            {
+              "id": "menu_pharmadus_expeditions",
+              "name": "Expediciones",
+              "parent": "menu_pharmadus_warehouse_ops",
+              "action": "action_pharmadus_expeditions",
+              "groups": "stock.group_stock_user",
+              "sequence": "4"
+            }
+          ],
+          "actions": [
+            {
+              "id": "action_pharmadus_expeditions",
+              "model": "ir.actions.act_window",
+              "name": "Expediciones",
+              "res_model": "stock.picking",
+              "view_mode": "list"
+            }
+          ],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/pharmadus_palet_labels_wizard_views.xml",
+          "records": [
+            {
+              "id": "view_pharmadus_palet_labels_wizard_form",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/pharmadus_picking_shortage_views.xml",
+          "records": [
+            {
+              "id": "view_pharmadus_picking_shortage_form",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/pharmadus_split_line_views.xml",
+          "records": [
+            {
+              "id": "view_pharmadus_split_line_form",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/product_template_views.xml",
+          "records": [
+            {
+              "id": "view_product_template_form_pharmadus_shipping",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/res_company_views.xml",
+          "records": [
+            {
+              "id": "view_company_form_pharmadus_aecoc",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/res_partner_views.xml",
+          "records": [
+            {
+              "id": "view_partner_form_pharmadus_palet_report",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/sale_order_views.xml",
+          "records": [
+            {
+              "id": "view_order_form_pharmadus_carrier_note",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/stock_move_line_views.xml",
+          "records": [
+            {
+              "id": "view_stock_move_line_operation_tree_pharmadus",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "view_stock_move_line_detailed_operation_tree_pharmadus",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        },
+        {
+          "file": "pharmadus_stock_shipping/views/stock_picking_views.xml",
+          "records": [
+            {
+              "id": "view_picking_form_pharmadus_shipping",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": [
+        {
+          "file": "pharmadus_stock_shipping/security/ir.model.access.csv",
+          "columns": [
+            "id",
+            "name",
+            "model_id:id",
+            "group_id:id",
+            "perm_read",
+            "perm_write",
+            "perm_create",
+            "perm_unlink"
+          ],
+          "rows": 5,
+          "models": [
+            "model_pharmadus_palet_labels_wizard",
+            "model_pharmadus_picking_bulto",
+            "model_pharmadus_picking_shortage_wizard",
+            "model_pharmadus_split_line",
+            "model_pharmadus_sscc"
+          ]
+        }
+      ]
+    },
     "pharmadus_stock_supplier_lot": {
       "path": "pharmadus_stock_supplier_lot",
       "manifest": {
@@ -1548,6 +2319,258 @@
         }
       ],
       "csv": []
+    },
+    "product_gtin_codes": {
+      "path": "product_gtin_codes",
+      "manifest": {
+        "name": "GTIN product codes",
+        "version": "18.0.1.0.0",
+        "depends": [
+          "product",
+          "pharmadus_base"
+        ],
+        "data": [
+          "security/ir.model.access.csv",
+          "views/product_views.xml",
+          "views/barcode_report.xml",
+          "views/lot_labels.xml"
+        ],
+        "assets": {},
+        "installable": true,
+        "license": "AGPL-3",
+        "post_init_hook": "post_init_hook"
+      },
+      "models": [
+        {
+          "class": "PrintLotLabels",
+          "file": "product_gtin_codes/models/print_lot_labels.py",
+          "line": 6,
+          "name": "print.lot.labels",
+          "inherit": null,
+          "inherits": null,
+          "description": "Imprimir etiquetas de cajones",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "product.gtin14",
+            "stock.lot"
+          ]
+        },
+        {
+          "class": "ProductGtin14",
+          "file": "product_gtin_codes/models/product.py",
+          "line": 78,
+          "name": "product.gtin14",
+          "inherit": null,
+          "inherits": null,
+          "description": "GTIN-14 code",
+          "transient": null,
+          "field_types": [
+            "Many2many",
+            "Many2one",
+            "One2many"
+          ],
+          "comodels": [
+            "product.gtin14.res.partner.rel",
+            "product.product",
+            "product.template",
+            "res.partner"
+          ]
+        },
+        {
+          "class": "ProductGtin14ResPartnerRel",
+          "file": "product_gtin_codes/models/product.py",
+          "line": 215,
+          "name": "product.gtin14.res.partner.rel",
+          "inherit": null,
+          "inherits": null,
+          "description": "GTIN-14 units per partner",
+          "transient": null,
+          "field_types": [
+            "Many2one"
+          ],
+          "comodels": [
+            "product.gtin14",
+            "res.partner"
+          ]
+        },
+        {
+          "class": "ProductGtin",
+          "file": "product_gtin_codes/models/product.py",
+          "line": 240,
+          "name": "product.gtin",
+          "inherit": null,
+          "inherits": null,
+          "description": "GTIN code to print",
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        },
+        {
+          "class": "ProductProduct",
+          "file": "product_gtin_codes/models/product.py",
+          "line": 262,
+          "name": null,
+          "inherit": "product.product",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one",
+            "One2many"
+          ],
+          "comodels": [
+            "product.gtin14",
+            "res.country"
+          ]
+        },
+        {
+          "class": "ProductTemplate",
+          "file": "product_gtin_codes/models/product.py",
+          "line": 417,
+          "name": null,
+          "inherit": "product.template",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [
+            "Many2one",
+            "One2many"
+          ],
+          "comodels": [
+            "product.gtin14",
+            "res.country"
+          ]
+        },
+        {
+          "class": "StockLot",
+          "file": "product_gtin_codes/models/stock_lot.py",
+          "line": 20,
+          "name": null,
+          "inherit": "stock.lot",
+          "inherits": null,
+          "description": null,
+          "transient": null,
+          "field_types": [],
+          "comodels": []
+        }
+      ],
+      "xml": [
+        {
+          "file": "product_gtin_codes/views/barcode_report.xml",
+          "records": [
+            {
+              "id": "paperformat_gtin_barcode",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "paperformat_gtin_barcode_tiny",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "action_report_gtin_barcode",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_gtin_barcode_tiny",
+              "model": "ir.actions.report"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": [
+            "gtin_barcode_report",
+            "gtin_barcode_report_tiny"
+          ]
+        },
+        {
+          "file": "product_gtin_codes/views/lot_labels.xml",
+          "records": [
+            {
+              "id": "paperformat_lot_box_label",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "paperformat_lot_tiny_box_label",
+              "model": "report.paperformat"
+            },
+            {
+              "id": "view_print_lot_labels_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "action_print_lot_labels",
+              "model": "ir.actions.act_window"
+            },
+            {
+              "id": "action_report_lot_box_label",
+              "model": "ir.actions.report"
+            },
+            {
+              "id": "action_report_lot_tiny_box_label",
+              "model": "ir.actions.report"
+            }
+          ],
+          "menus": [],
+          "actions": [
+            {
+              "id": "action_print_lot_labels",
+              "model": "ir.actions.act_window",
+              "name": "Etiquetas de cajones",
+              "res_model": "print.lot.labels",
+              "view_mode": "form"
+            }
+          ],
+          "templates": [
+            "report_lot_box_label",
+            "report_lot_tiny_box_label"
+          ]
+        },
+        {
+          "file": "product_gtin_codes/views/product_views.xml",
+          "records": [
+            {
+              "id": "product_gtin_codes_product_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "gtin14_partners_form",
+              "model": "ir.ui.view"
+            },
+            {
+              "id": "gtin14_units_tree",
+              "model": "ir.ui.view"
+            }
+          ],
+          "menus": [],
+          "actions": [],
+          "templates": []
+        }
+      ],
+      "csv": [
+        {
+          "file": "product_gtin_codes/security/ir.model.access.csv",
+          "columns": [
+            "id",
+            "name",
+            "model_id:id",
+            "group_id:id",
+            "perm_read",
+            "perm_write",
+            "perm_create",
+            "perm_unlink"
+          ],
+          "rows": 4,
+          "models": [
+            "model_print_lot_labels",
+            "model_product_gtin",
+            "model_product_gtin14",
+            "model_product_gtin14_res_partner_rel"
+          ]
+        }
+      ]
     },
     "stock_lot_state": {
       "path": "stock_lot_state",
