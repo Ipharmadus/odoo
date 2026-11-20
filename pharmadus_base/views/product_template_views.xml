@@ -3,7 +3,7 @@
     <record id="view_product_template_form_pharmadus_specifications" model="ir.ui.view">
         <field name="name">product.template.form.pharmadus.specifications</field>
         <field name="model">product.template</field>
-        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//page[@name='general_information']" position="after">
                 <page name="pharmadus_specifications" string="Especificaciones">
@@ -40,7 +40,7 @@
     <record id="view_product_template_form_pharmadus_tags_hide_sales" model="ir.ui.view">
         <field name="name">product.template.form.pharmadus.tags.hide.sales</field>
         <field name="model">product.template</field>
-        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//page[@name='sales']//field[@name='product_tag_ids']" position="attributes">
                 <attribute name="invisible">1</attribute>
@@ -72,6 +72,32 @@
                     name="product_tag_ids"
                     widget="many2many_tags"
                     context="{'product_template_id': id}"
+                />
+            </field>
+        </field>
+    </record>
+
+    <record id="view_product_variant_form_pharmadus_cn_code" model="ir.ui.view">
+        <field name="name">product.product.form.pharmadus.cn.code</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <field name="barcode" position="after">
+                <field name="cn_code" invisible="type in ['service', 'combo']"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_product_variant_form_pharmadus_tags_below_barcode" model="ir.ui.view">
+        <field name="name">product.product.form.pharmadus.tags.below.barcode</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <field name="barcode" position="after">
+                <field
+                    name="product_tag_ids"
+                    widget="many2many_tags"
+                    context="{'product_template_id': product_tmpl_id}"
                 />
             </field>
         </field>
