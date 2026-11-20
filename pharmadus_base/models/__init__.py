@@ -2,6 +2,7 @@
 
 from . import pharmadus_product_specification
 from . import ir_model_data
+from . import ir_actions_report
 from . import purchase_requisition
 from . import product_template
 from . import product_product

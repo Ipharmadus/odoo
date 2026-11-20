@@ -2,3 +2,4 @@
 
 from . import test_account_invoice_report
 from . import test_stock_lot_receipts
+from . import test_report_encoding
