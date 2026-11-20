@@ -25,6 +25,35 @@ Utilidades de consola para migrar datos de Pharmadus desde Odoo 8 hacia Odoo 18 
 - `scripts/mark_bank_account_required.py`: marca la opción «Cuenta bancaria requerida»
   (`account.payment.method.bank_account_required`) en todos los métodos de pago salientes de la base
   de destino, archivados incluidos. No migra nada del origen: es un ajuste de configuración.
+- `scripts/migrate_expedition_sent.py`: copia el contador `sent` de las expediciones del 8
+  (`stock.expeditions.sent`) al albarán del 18 (`stock.picking.pharmadus_expedition_sent`),
+  emparejando por nombre + compañía. Solo sube el valor, incluye salidas no canceladas (aunque
+  estén `assigned`) y es idempotente. Además marca los albaranes `done` con transportista de
+  Pharmadus Botanicals (sin filtro de fecha) como enviados. Simula por defecto; `--write` para
+  escribir.
+- `scripts/migrate_edi_partner_images.py`: copia las imágenes de los
+  partners EDI del 8 al 18 (99 imágenes), necesarias para los logos de los
+  informes ECI. Simula por defecto; `--write` para escribir.
+- `scripts/migrate_edi_reports.py`: migra los campos EDI del 8 al 18
+  (`res.partner.edi_desadv/edi_partner/edi_supplier_ref/gln` y
+  `sale.order.customer_branch/customer_department/customer_transmitter/top_date`).
+  Simula por defecto; `--write` para escribir; idempotente.
+- `scripts/remove_legacy_reports.py`: retira los informes cuyo modelo ya no existe en la base de
+  destino, personalizaciones de SIGI que la migración arrastra a Odoo 18 y que siguen saliendo en el
+  menú Imprimir del modelo actual (caso de la «Etiqueta cajón GTIN14» de `stock.production.lot`).
+  Simula por defecto; `--write` para borrarlos y `--revert-out` para guardar la reversión.
+- `scripts/migrate_supplier_delivery_note.py`: en el 8 el módulo `stock_reception` añade
+  `stock.picking.supplier_delivery_note` («Albarán de proveedor»), campo que **no existe en el 18**.
+  El script lo escribe en `stock.picking.origin` del 18 detrás del documento de origen (por defecto
+  `"origin(8) albarán de proveedor"`, el albarán tras el pedido de compra; configurable con
+  `--format`), emparejando por nombre + compañía. Solo pisa `origin` si sigue igual que en el 8,
+  salvo `--force`; es idempotente y admite `--revert-out`. Simula por defecto; `--write` para
+  escribir.
+- `scripts/clean_product_expiry_without_times.py`: desmarca «Fecha de caducidad»
+  (`product.template.use_expiration_date`) en las plantillas que tienen a 0 los cuatro tiempos de la
+  sección «FECHAS» (`expiration_time`, `use_time`, `removal_time`, `alert_time`). Solo escribe en la
+  base de destino, simula por defecto, es idempotente y admite `--revert-out`, `--include-archived`
+  y `--limit`.
 
 ## Requisitos
 
@@ -976,3 +1005,164 @@ Transferencia *`), **5 tienen alguna línea sin cuenta bancaria de proveedor** (
 `2025/065`, `2025/145`, `2025/185` y `2025/273`; 11 líneas de 120): tampoco se confirmarán hasta
 rellenar el dato. Es justo lo que la opción pretende exigir, pero conviene repasar esas órdenes
 antes de confirmarlas. Volver atrás es desmarcar el campo en los métodos afectados.
+
+## Informes heredados que apuntan a un modelo que ya no existe
+
+`scripts/remove_legacy_reports.py` retira de la base de destino los informes (`ir.actions.report`)
+cuyo campo `model` no existe en `ir.model`. Son personalizaciones que en SIGI se crearon desde la
+interfaz (por eso su plantilla QWeb lleva el módulo `__export__`) y que la migración arrastra a Odoo
+18: si el modelo cambió de nombre (`stock.production.lot` pasó a `stock.lot` en Odoo 17), el informe
+ya no se puede imprimir, pero **sigue saliendo en el menú Imprimir** del modelo al que está
+enlazado, porque `binding_model_id` apunta al `ir.model` actual y ese enlace sobrevive a la
+migración.
+
+- **Caso actual:** «Etiqueta cajón GTIN14» (informe 1825, plantilla QWeb
+  `__export__.ir_ui_view_etiqueta_eco_lote`, modelo `stock.production.lot`), enlazado a `stock.lot`
+  en las dos bases. Lo sustituyen las **«Etiquetas de cajones»** de `product_gtin_codes` (asistente
+  desde el lote, con el GTIN-14 elegible e impresión en PDF), así que se retira del menú.
+- **Qué no toca:** la plantilla QWeb heredada se queda en la base, huérfana. Es la única copia del
+  diseño de SIGI que hay dentro de Odoo 18 y no se muestra en ningún sitio; el script la lista en la
+  simulación y en la reversión para que se sepa cuál es.
+- **Simulación por defecto e idempotente:** sin `--write` solo informa y, si no queda ningún
+  informe huérfano, no hace nada. Al terminar relee la base y comprueba el menú Imprimir tal como lo
+  pide el cliente web (`ir.actions.actions.get_bindings`).
+- `--report-ids` limita la pasada a unos ids concretos y `--revert-out` guarda un JSON con todos los
+  campos de los informes borrados para recrearlos a mano (la plantilla QWeb sigue en la base).
+
+```bash
+# simulación
+python3 migracion_pharmadus_8_18/scripts/remove_legacy_reports.py \
+  --config migracion_pharmadus_8_18/config.json
+# escritura, guardando la reversión
+python3 migracion_pharmadus_8_18/scripts/remove_legacy_reports.py \
+  --config migracion_pharmadus_8_18/config.json --write \
+  --revert-out /home/odoo/revert/legacy_reports_revert.json
+```
+
+Resultado del 2026-11-19: en `devel` se borró el informe 1825 y el menú Imprimir del lote quedó con
+los seis informes legítimos (PDF y ZPL del lote, las dos etiquetas de recepción y las de aprobado y
+rechazado). En Comunitea (`prod`) la simulación encuentra el mismo informe 1825: está pendiente
+retirarlo también allí, lo natural es hacerlo cuando se instale el módulo que aporta la etiqueta
+sustituta.
+
+## Albarán de proveedor en el documento de origen
+
+En SIGI el módulo `stock_reception` añade `stock.picking.supplier_delivery_note` («Albarán de
+proveedor»). Ese campo **no existe en Odoo 18**, así que el dato se perdía en la migración.
+`scripts/migrate_supplier_delivery_note.py` lo conserva escribiéndolo en el campo
+`stock.picking.origin` del 18 detrás del documento de origen (el pedido de compra), separados por un
+solo espacio:
+
+```text
+origin(18) = "<origin(8)> <albarán de proveedor>"    # --format origin-note (por defecto)
+```
+
+El orden y el formato se eligen con `--format`:
+
+| Valor | Resultado |
+| --- | --- |
+| `origin-note` (por defecto) | `PO14091 A6-5014` |
+| `note-origin` | `A6-5014 PO14091` |
+| `origin-alb-note` | `PO14091 ALB A6-5014` |
+
+- **Emparejamiento:** nombre de albarán + compañía, igual que `migrate_expedition_sent.py`; los
+  nombres coinciden entre los dos Odoo (`CY01\IN\00034`). Solo lee del origen, nunca escribe en SIGI.
+- **Escritura conservadora:** solo pisa `origin` del 18 cuando sigue siendo igual al del 8. Si
+  alguien lo ha tocado en el 18 (albarán recreado, origen anotado a mano) se informa como
+  **conflicto** y se deja intacto; `--force` lo pisa.
+- **Idempotente:** los albaranes ya concatenados se reconocen y no se reescriben. Entran todos los
+  estados, también cancelados y `assigned`, porque el dato es informativo.
+- `--revert-out` guarda un JSON con el `origin` anterior de cada albarán escrito; `--limit` limita
+  la pasada para probar y `--strict` sale con error si quedan conflictos o albaranes sin
+  correspondencia.
+
+```bash
+# simulación (no escribe nada)
+python3 migracion_pharmadus_8_18/scripts/migrate_supplier_delivery_note.py \
+  --config migracion_pharmadus_8_18/config.json
+# escritura, guardando la reversión
+python3 migracion_pharmadus_8_18/scripts/migrate_supplier_delivery_note.py \
+  --config migracion_pharmadus_8_18/config.json --write \
+  --revert-out /home/odoo/revert/supplier_delivery_note_revert.json
+```
+
+Resultado de la simulación previa del 2026-11-19 (antes de ejecutar) en las dos bases:
+
+| Concepto | `devel` | Comunitea (`prod`) |
+| --- | ---: | ---: |
+| Con albarán de proveedor en SIGI | 8.273 | 8.273 |
+| En blanco (solo espacios) | 65 | 65 |
+| Claves únicas (compañía + nombre) | 8.208 | 8.208 |
+| Encontrados en el 18 | 8.145 | 8.200 |
+| Ya concatenados | 0 | 0 |
+| **Pendientes de escribir** | **8.144** | **8.197** |
+| Conflictos (`origin` cambiado en el 18) | 1 | 3 |
+| Sin correspondencia en el 18 | 63 | 8 |
+
+- `devel` es una copia anterior a SIGI: los 63 sin correspondencia son recepciones posteriores a la
+  copia (nombres por encima de `CY01\IN\11262`, el máximo de esa base). El único conflicto es un
+  albarán con el mismo nombre pero otro origen.
+- En **producción** los 3 conflictos son `origin` anotados a mano por almacén el mismo 2026-11-19
+  (`CY01\IN\11249`: `PO13964 123`; `CY01\IN\11338`: `PO14091   ALB A6-5014`; `CY01\IN\11357`:
+  `PO14061  ALB A6-5017`); el script no los toca, `--force` para normalizarlos. Los 8 sin
+  correspondencia son las recepciones más recientes de SIGI, que aún no están en esa base. **La
+  base de producción es viva**: los números pueden cambiar entre pasadas.
+- **Ejecutado el 2026-11-19** (13:15–13:20, hora local): **8.144 albaranes escritos en `devel`**
+  (8.144/8.144 revalidados al terminar, 0 errores) y **8.197 en Comunitea (`prod`)** (8.197/8.197
+  revalidados, 0 errores). Al repetir la simulación, las dos bases dan «Ya concatenados» = 8.144 /
+  8.197 y «Pendientes de escribir» = 0: el script es idempotente también contra las bases reales.
+  Quedan sin tocar los conflictos (1 / 3) y los albaranes sin correspondencia (63 / 8) descritos
+  arriba.
+- Reversión guardada en `/home/odoo/revert/supplier_delivery_note_devel_20261119-121516.json`
+  (8.144 registros, con su `origin` anterior) y `supplier_delivery_note_prod_20261119-121633.json`
+  (8.197 registros).
+
+## Fecha de caducidad sin tiempos configurados
+
+La casilla **«Fecha de caducidad»** (`product.template.use_expiration_date`) activa la gestión de
+caducidad, pero no aporta nada si los cuatro tiempos de la sección **«FECHAS»** están a cero. En la
+migración quedaron **1.327 plantillas activas en `devel` y 1.331 en Comunitea** con la casilla
+marcada y todos los tiempos a 0 (palets, bolsas, etiquetas, cajas…); con ella activa, el alta de un
+lote les calcula una fecha de caducidad igual a la de recepción.
+
+`scripts/clean_product_expiry_without_times.py` desmarca la casilla en esos productos:
+
+- **Campos que mira:** `expiration_time` («Tiempo de vida producto»), `use_time` («Duración del
+  producto»), `removal_time` («Tiempo eliminación producto») y `alert_time` («Tiempo de alerta
+  producto»). Basta con que uno sea distinto de 0 para no tocar el producto; los valores vacíos
+  cuentan como 0.
+- **Solo destino:** no lee el origen. Sirve igual para `devel` (`config.json`) que para Comunitea
+  (`config.json.comunitea`, producción).
+- **Solo activas por defecto:** con `--include-archived` entra también el archivado (567 más en cada
+  base: 1.894 en `devel` y 1.898 en Comunitea).
+- **Idempotente y con reversión:** al repetir ya no encuentra nada; `--revert-out` guarda los ids
+  desmarcados para poder volver a marcarlos, y al final relee para comprobar que la casilla quedó
+  desmarcada. `--limit` limita la pasada para pruebas.
+
+```bash
+# simulación
+python3 migracion_pharmadus_8_18/scripts/clean_product_expiry_without_times.py \
+  --config migracion_pharmadus_8_18/config.json
+# escritura, guardando la reversión
+python3 migracion_pharmadus_8_18/scripts/clean_product_expiry_without_times.py \
+  --config migracion_pharmadus_8_18/config.json.comunitea --write \
+  --revert-out /home/odoo/revert/product_expiry_flags_prod.json
+```
+
+Resultado de la simulación previa (2026-11-19, antes de ejecutar):
+
+| Concepto | `devel` | Comunitea (`prod`) |
+| --- | ---: | ---: |
+| Plantillas activas con la casilla marcada | 2.929 | 2.880 |
+| Con algún tiempo configurado (no se tocan) | 1.602 | 1.549 |
+| **A desmarcar** | **1.327** | **1.331** |
+
+- **Ejecutado el 2026-11-19** (13:25, hora local): **1.327 plantillas desmarcadas en `devel`** y
+  **1.331 en Comunitea (`prod`)**, con 0 errores y 0 pendientes al releer. Al repetir la simulación,
+  las dos bases dan «con los cuatro tiempos a 0» = 0 y «Nada que hacer»: quedan con la casilla las
+  1.602 / 1.549 que sí tienen algún tiempo configurado. Los tiempos no se han tocado.
+- Reversión guardada en `/home/odoo/revert/product_expiry_flags_devel_20261119.json` (1.327
+  registros) y `product_expiry_flags_prod_20261119.json` (1.331), para volver a marcar la casilla si
+  hiciera falta.
+- Quedan **567 plantillas archivadas** en cada base con el mismo caso; no se han tocado porque el
+  script procesa solo activas por defecto (`--include-archived` para incluirlas).
