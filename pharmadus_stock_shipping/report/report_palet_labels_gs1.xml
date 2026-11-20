@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template id="report_palet_labels_gs1_128">
+        <t t-call="web.basic_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="palets"
+                   t-value="o.pharmadus_sscc_ids.filtered(lambda sscc: sscc.type == '1').sorted(lambda sscc: sscc.palet)"/>
+                <t t-if="not palets">
+                    <div class="page">
+                        <h2>No hay etiquetas de palet para este albarán.</h2>
+                    </div>
+                </t>
+                <t t-foreach="palets" t-as="sscc">
+                    <t t-set="position" t-value="palets.ids.index(sscc.id) + 1"/>
+                    <t t-set="data" t-value="sscc._pharmadus_gs1_data()"/>
+                    <div class="page" style="font-size: 11px; padding: 0;">
+                        <div class="row" style="border-bottom: 1px solid black; padding-bottom: 4px;">
+                            <div class="col-8">
+                                <strong style="font-size: 15px;">
+                                    Palet <t t-out="position"/> de <t t-out="len(palets)"/>
+                                </strong>
+                            </div>
+                            <div class="col-4 text-end">
+                                <span style="font-size: 12px;">SSCC: <t t-out="sscc.name"/></span>
+                            </div>
+                        </div>
+
+                        <div style="border: 1px solid black; padding: 4px; margin-top: 4px;">
+                            <strong t-field="o.company_id.partner_id.name"/><br/>
+                            <span t-field="o.company_id.partner_id.street"/><br/>
+                            <span t-field="o.company_id.partner_id.zip"/>
+                            <span t-field="o.company_id.partner_id.city"/>
+                        </div>
+
+                        <div style="border: 1px solid black; border-top: 0; padding: 4px;">
+                            <strong>LUGAR DE ENTREGA</strong><br/>
+                            <span t-field="o.partner_id.name"/><br/>
+                            <span t-field="o.partner_id.street"/>
+                            <span t-field="o.partner_id.street2"/><br/>
+                            <span t-field="o.partner_id.zip"/>
+                            <span t-field="o.partner_id.city"/><br/>
+                            <span t-field="o.partner_id.state_id"/>
+                            (<span t-field="o.partner_id.country_id"/>)
+                        </div>
+
+                        <table class="table table-sm" style="font-size: 11px; margin: 4px 0;">
+                            <tbody>
+                                <tr>
+                                    <th style="width: 30%;">DESCRIPCIÓN</th>
+                                    <td><span t-out="data['product'].name"/></td>
+                                </tr>
+                                <tr>
+                                    <th>GTIN13</th>
+                                    <td><span t-out="data['gtin13']"/></td>
+                                </tr>
+                                <tr>
+                                    <th>UNIDADES</th>
+                                    <td><span t-out="'%g' % data['quantity']"/></td>
+                                </tr>
+                                <tr>
+                                    <th>Nº LOTE</th>
+                                    <td><span t-out="data['lots']"/></td>
+                                </tr>
+                                <tr>
+                                    <th>CONS. PREF.</th>
+                                    <td><span t-out="data['dates']"/></td>
+                                </tr>
+                                <tr>
+                                    <th>GTIN14</th>
+                                    <td><span t-out="data['gtin14']"/></td>
+                                </tr>
+                                <tr>
+                                    <th>UNIDADES (CAJAS)</th>
+                                    <td><span t-out="data['boxes']"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div t-if="data['gtin14']" class="text-center" style="margin-top: 4px;">
+                            <div t-out="'02' + data['gtin14'] + '37' + str(data['boxes'])"
+                                 t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 500, 'height': 50, 'img_style': 'width:100%;height:auto'}"/>
+                            <span style="font-size: 11px; font-weight: bold;"
+                                  t-out="'(02)' + data['gtin14'] + '(37)' + str(data['boxes'])"/>
+                        </div>
+
+                        <div t-if="data['oldest_date']" class="text-center" style="margin-top: 4px;">
+                            <div t-out="'15' + data['oldest_date'].strftime('%y%m%d') + '10' + data['oldest_lot'].replace('-', '')"
+                                 t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 500, 'height': 50, 'img_style': 'width:100%;height:auto'}"/>
+                            <span style="font-size: 11px; font-weight: bold;"
+                                  t-out="'(15)' + data['oldest_date'].strftime('%y%m%d') + '(10)' + data['oldest_lot'].replace('-', '')"/>
+                        </div>
+
+                        <div class="text-center" style="margin-top: 4px;">
+                            <div t-out="'00' + sscc.name"
+                                 t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 500, 'height': 50, 'img_style': 'width:100%;height:auto'}"/>
+                            <span style="font-size: 11px; font-weight: bold;"
+                                  t-out="'(00)' + sscc.name"/>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

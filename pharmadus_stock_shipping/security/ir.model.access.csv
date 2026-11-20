@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pharmadus_picking_bulto_user,pharmadus.picking.bulto.user,model_pharmadus_picking_bulto,base.group_user,1,1,1,1
+access_pharmadus_sscc_user,pharmadus.sscc.user,model_pharmadus_sscc,base.group_user,1,1,1,1
+access_pharmadus_split_line_user,pharmadus.split.line.user,model_pharmadus_split_line,base.group_user,1,1,1,1
+access_pharmadus_palet_labels_wizard_user,pharmadus.palet.labels.wizard.user,model_pharmadus_palet_labels_wizard,base.group_user,1,1,1,1
+access_pharmadus_picking_shortage_user,pharmadus.picking.shortage.wizard.user,model_pharmadus_picking_shortage_wizard,base.group_user,1,1,1,1

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="view_pharmadus_split_line_form" model="ir.ui.view">
+        <field name="name">pharmadus.split.line.form</field>
+        <field name="model">pharmadus.split.line</field>
+        <field name="arch" type="xml">
+            <form string="Dividir línea">
+                <group>
+                    <field name="line_id" invisible="1"/>
+                    <field name="product_id"/>
+                    <field name="lot_id"/>
+                    <field name="line_quantity"/>
+                    <field name="available_quantity"/>
+                    <field name="product_uom_id"/>
+                    <field name="quantity"/>
+                </group>
+                <footer>
+                    <button name="action_split"
+                            string="Dividir"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancelar"
+                            special="cancel"
+                            class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

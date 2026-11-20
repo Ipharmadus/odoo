@@ -1,0 +1,47 @@
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+
+{
+    "name": "Pharmadus Stock Shipping",
+    "summary": "Expedición de albaranes: bultos, palets, completos y cajas",
+    "version": "18.0.1.0.0",
+    "category": "Inventory/Inventory",
+    "website": "https://github.com/Ipharmadus/odoo",
+    "author": "Pharmadus Botanicals",
+    "license": "AGPL-3",
+    "depends": [
+        "pharmadus_base",
+        "product_gtin_codes",
+        "report_xlsx",
+        "stock_delivery",
+    ],
+    "data": [
+        "security/ir.model.access.csv",
+        "views/pharmadus_split_line_views.xml",
+        "views/stock_move_line_views.xml",
+        "views/stock_picking_views.xml",
+        "views/product_template_views.xml",
+        "views/sale_order_views.xml",
+        "views/res_company_views.xml",
+        "views/res_partner_views.xml",
+        "views/pharmadus_palet_labels_wizard_views.xml",
+        "views/pharmadus_picking_shortage_views.xml",
+        "views/pharmadus_expeditions_views.xml",
+        "report/report_delivery_note.xml",
+        "report/report_internal_picking.xml",
+        "report/report_labels.xml",
+        "report/report_palet_labels_gs1.xml",
+        "report/report_expedition.xml",
+        "report/report_actions.xml",
+    ],
+    "post_init_hook": "post_init_hook",
+    "assets": {
+        "web.assets_backend": [
+            "pharmadus_stock_shipping/static/src/js/split_button.js",
+            "pharmadus_stock_shipping/static/src/js/pick_from_lot_first.js",
+            "pharmadus_stock_shipping/static/src/xml/split_button.xml",
+        ],
+    },
+    "installable": True,
+    "application": False,
+    "auto_install": False,
+}

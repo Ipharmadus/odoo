@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template id="report_bulto_labels">
+        <t t-call="web.html_container">
+            <style type="text/css">
+                html, body, .article, .page {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+                body {
+                    font-family: 'Nimbus Sans', 'Liberation Sans', Arial, sans-serif;
+                    color: #000;
+                }
+                .pharmadus-bulto-label {
+                    width: 100%;
+                    height: 91.5mm;
+                    position: relative;
+                    overflow: hidden;
+                    page-break-after: always;
+                }
+                .pharmadus-bulto-head {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-size: 10.5pt;
+                    line-height: 1.2;
+                }
+                .pharmadus-bulto-head td {
+                    vertical-align: top;
+                    padding: 0;
+                }
+                .pharmadus-bulto-barcode {
+                    display: inline-block;
+                    vertical-align: top;
+                    margin-top: -1.4mm;
+                }
+                .pharmadus-bulto-barcode img {
+                    width: 68mm !important;
+                    height: 9.4mm !important;
+                    max-width: none !important;
+                }
+                .pharmadus-bulto-logo {
+                    width: 36mm !important;
+                    height: 11.8mm !important;
+                    max-width: none !important;
+                    max-height: none !important;
+                    vertical-align: middle;
+                    margin-left: 2mm;
+                }
+                .pharmadus-bulto-body {
+                    position: absolute;
+                    top: 13mm;
+                    left: 0;
+                    right: 0;
+                }
+                .pharmadus-bulto-customer {
+                    font-size: 22pt;
+                    font-weight: bold;
+                    line-height: 1.05;
+                }
+                .pharmadus-bulto-line {
+                    font-size: 17.6pt;
+                    line-height: 1.02;
+                }
+                .pharmadus-bulto-totals {
+                    width: 100%;
+                    table-layout: fixed;
+                    border-collapse: collapse;
+                    border-top: 1px solid #000;
+                    border-bottom: 1px solid #000;
+                    font-size: 13.2pt;
+                    line-height: 1.2;
+                    margin-top: 1.5mm;
+                }
+                .pharmadus-bulto-totals th {
+                    font-weight: normal;
+                    text-align: left;
+                    padding: 0.8mm 0 0 0;
+                }
+                .pharmadus-bulto-totals td {
+                    font-weight: bold;
+                    padding: 0 0 0.8mm 0;
+                }
+                .pharmadus-bulto-articles {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 11.8pt;
+                    line-height: 1.2;
+                    margin-top: 1mm;
+                }
+                .pharmadus-bulto-articles th {
+                    font-weight: bold;
+                    text-align: left;
+                    padding: 0;
+                }
+                .pharmadus-bulto-articles td {
+                    padding: 0;
+                }
+                .pharmadus-bulto-articles th:last-child {
+                    padding-right: 4.5mm;
+                }
+                .pharmadus-bulto-articles td:last-child {
+                    padding-right: 9mm;
+                }
+            </style>
+            <t t-foreach="docs" t-as="o">
+                <t t-set="bultos"
+                   t-value="o.pharmadus_sscc_ids.filtered(lambda sscc: sscc.type in ('2', '3'))"/>
+                <t t-set="total_bultos" t-value="o.number_of_packages or len(bultos)"/>
+                <t t-if="not bultos">
+                    <div class="pharmadus-bulto-label">
+                        <h2>No hay etiquetas de bulto para este albarán.</h2>
+                    </div>
+                </t>
+                <t t-foreach="bultos" t-as="sscc">
+                    <t t-set="position" t-value="bultos.ids.index(sscc.id) + 1"/>
+                    <t t-set="partner" t-value="o.partner_id"/>
+                    <t t-set="customer_title"
+                       t-value="(partner.parent_id.name + ', ' + partner.name) if partner.parent_id else partner.name"/>
+                    <t t-set="commercial"
+                       t-value="partner.parent_id.comercial if partner.parent_id else partner.comercial"/>
+                    <div class="pharmadus-bulto-label"
+                         t-att-style="'page-break-after: always;' if position != len(bultos) else 'page-break-after: auto;'">
+                        <table class="pharmadus-bulto-head">
+                            <tr>
+                                <td style="width: 34%;">
+                                    Bulto <t t-out="position"/> de <t t-out="total_bultos"/>
+                                    - Pegatina 1 de 1<br/>
+                                    SSCC: <t t-out="sscc.name"/>
+                                </td>
+                                <td style="width: 66%; text-align: right; white-space: nowrap;">
+                                    <span class="pharmadus-bulto-barcode">
+                                        <div t-out="sscc.name"
+                                             t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 500, 'height': 80, 'img_style': 'width: 58mm; height: 8mm;'}"/>
+                                    </span>
+                                    <img t-if="o._pharmadus_company_logo_data()"
+                                         class="pharmadus-bulto-logo"
+                                         t-att-src="o._pharmadus_company_logo_data()"/>
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="pharmadus-bulto-body">
+                            <div class="pharmadus-bulto-customer" t-out="customer_title"/>
+                            <div t-if="commercial" class="pharmadus-bulto-line" t-out="commercial"/>
+                            <div t-if="partner.street" class="pharmadus-bulto-line" t-out="partner.street"/>
+                            <div t-if="partner.street2" class="pharmadus-bulto-line" t-out="partner.street2"/>
+                            <div class="pharmadus-bulto-line">
+                                <span t-out="partner.zip"/> <span t-out="partner.city"/>
+                            </div>
+                            <div class="pharmadus-bulto-line">
+                                <span t-out="partner.state_id.name"/>
+                                (<span t-out="partner.country_id.name"/>)
+                                <t t-if="partner.phone and len(partner.phone) > 1">
+                                    - Tfno. <span t-out="partner.phone"/>
+                                </t>
+                                <t t-if="partner.mobile and len(partner.mobile) > 1">
+                                    - Móvil <span t-out="partner.mobile"/>
+                                </t>
+                            </div>
+                            <table class="pharmadus-bulto-totals">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 10%;">Bultos</th>
+                                        <th style="width: 16%;">Peso total</th>
+                                        <th style="width: 33%;">Fecha y hora</th>
+                                        <th style="width: 41%;">Transportista</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span t-out="total_bultos"/></td>
+                                        <td><span t-out="'%g' % o.real_weight"/> kg</td>
+                                        <td>
+                                            <t t-if="o.date_done">
+                                                <span t-field="o.date_done"/>
+                                            </t>
+                                        </td>
+                                        <td>
+                                            <span t-out="(o.carrier_id.name or '').split(':')[0].strip()"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table class="pharmadus-bulto-articles">
+                                <thead>
+                                    <tr>
+                                        <th>ARTÍCULO</th>
+                                        <th style="width: 20%; text-align: right;">CANTIDAD</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="sscc._pharmadus_label_lines()" t-as="line">
+                                        <td><span t-out="line.product_id.name"/></td>
+                                        <td style="text-align: right;">
+                                            <span t-out="'%g' % sscc._pharmadus_label_qty(line)"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_palet_labels">
+        <t t-call="web.basic_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="palets"
+                   t-value="o.pharmadus_sscc_ids.filtered(lambda sscc: sscc.type == '1').sorted(lambda sscc: sscc.palet)"/>
+                <t t-if="not palets">
+                    <div class="page">
+                        <h2>No hay etiquetas de palet para este albarán.</h2>
+                    </div>
+                </t>
+                <t t-foreach="palets" t-as="sscc">
+                    <t t-set="position" t-value="palets.ids.index(sscc.id) + 1"/>
+                    <div class="page">
+                        <div class="row">
+                            <div class="col-8">
+                                <strong style="font-size: 18px;">
+                                    Palet <t t-out="position"/> de <t t-out="len(palets)"/>
+                                </strong>
+                                <br/>
+                                <span style="font-size: 14px;">
+                                    SSCC: <t t-out="sscc.name"/>
+                                </span>
+                            </div>
+                            <div class="col-4 text-end">
+                                <t t-if="o.company_id.logo">
+                                    <img t-att-src="'data:image/png;base64,%s' % o.company_id.logo"
+                                         style="max-height: 45px;"/>
+                                </t>
+                            </div>
+                        </div>
+
+                        <div class="mt-2" style="font-size: 13px;">
+                            <strong t-field="o.partner_id.name"/><br/>
+                            <span t-field="o.partner_id.street"/>
+                            <span t-field="o.partner_id.street2"/><br/>
+                            <span t-field="o.partner_id.zip"/>
+                            <span t-field="o.partner_id.city"/><br/>
+                            <span t-field="o.partner_id.state_id"/>
+                            (<span t-field="o.partner_id.country_id"/>)
+                        </div>
+
+                        <table class="table table-sm mt-2" style="font-size: 13px;">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Lote</th>
+                                    <th class="text-end">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="sscc._pharmadus_label_lines()" t-as="line">
+                                    <td><span t-field="line.product_id.name"/></td>
+                                    <td><span t-field="line.lot_id"/></td>
+                                    <td class="text-end">
+                                        <span t-out="'%g' % line.quantity"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="row mt-2" style="font-size: 12px;">
+                            <div class="col-3">
+                                <strong>Palets:</strong>
+                                <span t-field="o.number_of_palets"/>
+                            </div>
+                            <div class="col-3">
+                                <strong>Peso:</strong>
+                                <span t-out="'%g' % o.real_weight"/> kg
+                            </div>
+                            <div class="col-3">
+                                <strong>Fecha:</strong>
+                                <t t-if="o.date_done">
+                                    <span t-field="o.date_done"/>
+                                </t>
+                            </div>
+                            <div class="col-3">
+                                <strong>Transportista:</strong>
+                                <span t-field="o.carrier_id"/>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <div t-out="sscc.name"
+                                 t-options="{'widget': 'barcode', 'symbology': 'Code128', 'width': 500, 'height': 80, 'img_style': 'width:100%;height:auto'}"/>
+                            <br/>
+                            <span t-out="sscc.name"
+                                  style="font-size: 16px; font-weight: bold;"/>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

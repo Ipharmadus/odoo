@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="view_stock_move_line_operation_tree_pharmadus" model="ir.ui.view">
+        <field name="name">stock.move.line.operation.tree.pharmadus</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_stock_move_line_operation_tree"/>
+        <field name="arch" type="xml">
+            <field name="quantity" position="after">
+                <field name="pharmadus_split_button"
+                       widget="pharmadus_split_button"
+                       string=" "
+                       width="30px"
+                       invisible="state in ('done', 'cancel')"/>
+                <field name="pharmadus_bulto" optional="show"/>
+                <field name="pharmadus_palet" optional="show"/>
+                <field name="pharmadus_complete" optional="show"/>
+                <field name="pharmadus_rest" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_stock_move_line_detailed_operation_tree_pharmadus" model="ir.ui.view">
+        <field name="name">stock.move.line.detailed.operation.tree.pharmadus</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_stock_move_line_detailed_operation_tree"/>
+        <field name="arch" type="xml">
+            <field name="quantity" position="after">
+                <field name="pharmadus_split_button"
+                       widget="pharmadus_split_button"
+                       string=" "
+                       width="30px"
+                       invisible="state in ('done', 'cancel')"/>
+                <field name="pharmadus_bulto" optional="show"/>
+                <field name="pharmadus_palet" optional="show"/>
+                <field name="pharmadus_complete" optional="show"/>
+                <field name="pharmadus_rest" optional="show"/>
+            </field>
+        </field>
+    </record>
+</odoo>

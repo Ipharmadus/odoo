@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <!-- El tipo de etiqueta de palet se elige en el asistente del albarán;
+         la vista se conserva vacía para no dejar el campo antiguo en el
+         formulario del contacto. -->
+    <record id="view_partner_form_pharmadus_palet_report" model="ir.ui.view">
+        <field name="name">res.partner.form.pharmadus.palet.report</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <data/>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template id="report_expedition">
+        <t t-call="web.basic_layout">
+            <t t-set="company" t-value="docs[:1].company_id or res_company"/>
+            <div class="page">
+                <div class="expedition-report-header"
+                     style="border-bottom: 1px solid #999999; margin-bottom: 8px; padding-bottom: 6px;">
+                    <table style="width: 100%; border: 0; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 20%; vertical-align: middle; text-align: left;">
+                                <img t-if="company.logo"
+                                     t-att-src="image_data_uri(company.logo)"
+                                     alt="Logo"
+                                     style="max-height: 60px; max-width: 210px;"/>
+                            </td>
+                            <td style="width: 60%; vertical-align: middle; text-align: center;">
+                                <div style="font-size: 19px; font-weight: bold;">
+                                    Informe de expediciones del día
+                                    <span t-out="docs._pharmadus_expedition_report_date_label()"/>
+                                </div>
+                                <div style="font-size: 13px;">
+                                    <span t-out="company.name"/>
+                                    <t t-if="company.vat">
+                                        · NIF: <span t-out="company.vat"/>
+                                    </t>
+                                </div>
+                            </td>
+                            <td style="width: 20%;"></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <t t-if="not docs">
+                    <p>No hay expediciones seleccionadas.</p>
+                </t>
+                <t t-else="">
+                    <style>
+                        .expedition-table {
+                            border-collapse: collapse;
+                            width: 100%;
+                        }
+                        .expedition-table th,
+                        .expedition-table td {
+                            border: 1px solid #cccccc;
+                            padding: 2px 3px;
+                            vertical-align: top;
+                        }
+                    </style>
+                    <t t-foreach="docs.grouped('carrier_id').items()" t-as="group">
+                        <t t-set="carrier" t-value="group[0]"/>
+                        <t t-set="lines" t-value="group[1]"/>
+                        <t t-set="totals" t-value="lines._pharmadus_expedition_totals()"/>
+                        <h4 class="mt-3">
+                            <t t-if="carrier"><span t-out="carrier.name"/></t>
+                            <t t-else="">Sin transportista</t>
+                        </h4>
+                        <table class="table table-sm expedition-table" style="font-size: 8px;">
+                            <colgroup>
+                                <col style="width: 16%;"/>
+                                <col style="width: 20%;"/>
+                                <col style="width: 13%;"/>
+                                <col style="width: 5%;"/>
+                                <col style="width: 10%;"/>
+                                <col style="width: 5%;"/>
+                                <col style="width: 5%;"/>
+                                <col style="width: 5%;"/>
+                                <col style="width: 9%;"/>
+                                <col style="width: 5%;"/>
+                                <col style="width: 7%;"/>
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Dirección de envío</th>
+                                    <th>Teléfono / email</th>
+                                    <th>C.P.</th>
+                                    <th>Población</th>
+                                    <th class="text-end">Peso</th>
+                                    <th class="text-end">Bultos</th>
+                                    <th class="text-end">Palets</th>
+                                    <th>Albarán</th>
+                                    <th>Etiquetas</th>
+                                    <th class="text-end">Contrareembolso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="lines" t-as="picking">
+                                    <tr t-att-style="'background-color: #f2f2f2;' if picking_index % 2 else ''">
+                                        <td>
+                                            <span t-out="picking.partner_id.display_name"/>
+                                            <t t-if="picking.partner_id.comercial">
+                                                <br/><span t-out="picking.partner_id.comercial"/>
+                                            </t>
+                                        </td>
+                                        <td>
+                                            <span t-out="picking.partner_id.street"/>
+                                            <t t-if="picking.partner_id.street2">
+                                                <br/><span t-out="picking.partner_id.street2"/>
+                                            </t>
+                                        </td>
+                                        <td>
+                                            <t t-if="picking.partner_id.phone">
+                                                <span t-out="picking.partner_id.phone"/>
+                                            </t>
+                                            <t t-if="picking.partner_id.mobile">
+                                                <br/><span t-out="picking.partner_id.mobile"/>
+                                            </t>
+                                            <t t-if="picking.partner_id.email">
+                                                <br/><span t-out="picking.partner_id.email"/>
+                                            </t>
+                                        </td>
+                                        <td><span t-out="picking.partner_id.zip"/></td>
+                                        <td><span t-out="picking.partner_id.city"/></td>
+                                        <td class="text-end">
+                                            <span t-out="'%g' % (picking.real_weight or 0.0)"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-out="picking.number_of_packages or 0"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-out="picking.number_of_palets or 0"/>
+                                        </td>
+                                        <td><span t-out="picking.name"/></td>
+                                        <td class="text-center">
+                                            <span t-out="picking.pharmadus_expedition_labels_printed"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-if="picking.pharmadus_expedition_cod_amount">
+                                                <span t-field="picking.pharmadus_expedition_cod_amount"
+                                                      t-options="{'widget': 'monetary', 'display_currency': picking.pharmadus_expedition_currency_id}"/>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                    <tr t-if="picking.sale_id and picking.sale_id.pharmadus_carrier_note"
+                                        t-att-style="'background-color: #f2f2f2;' if picking_index % 2 else ''">
+                                        <td colspan="11"
+                                            style="border-top: 0; padding-top: 0;">
+                                            <em>Observaciones:</em>
+                                            <span t-out="picking.sale_id.pharmadus_carrier_note"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="5" class="text-end">
+                                        <strong>
+                                            Total
+                                            <t t-out="carrier.name if carrier else 'sin transportista'"/>
+                                        </strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong><t t-out="'%g' % totals['weight']"/></strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong><t t-out="totals['packages']"/></strong>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong><t t-out="totals['palets']"/></strong>
+                                    </td>
+                                    <td/>
+                                    <td/>
+                                    <td/>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </t>
+
+                    <t t-set="grand" t-value="docs._pharmadus_expedition_totals()"/>
+                    <div class="mt-3">
+                        <strong>Total general:</strong>
+                        <t t-out="grand['count']"/> albaranes ·
+                        <t t-out="'%g' % grand['weight']"/> kg ·
+                        <t t-out="grand['packages']"/> bultos ·
+                        <t t-out="grand['palets']"/> palets
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+</odoo>

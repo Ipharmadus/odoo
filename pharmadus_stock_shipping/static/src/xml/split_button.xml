@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="pharmadus_stock_shipping.SplitButton">
+        <button type="button"
+                class="btn btn-link p-0 text-secondary"
+                t-on-click.stop="onClick"
+                title="Dividir línea">
+            <i class="fa fa-scissors"/>
+        </button>
+    </t>
+</templates>

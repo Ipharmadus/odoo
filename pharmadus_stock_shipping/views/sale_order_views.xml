@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="view_order_form_pharmadus_carrier_note" model="ir.ui.view">
+        <field name="name">sale.order.form.pharmadus.carrier.note</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='sale_shipping']" position="inside">
+                <field name="pharmadus_carrier_note"
+                       placeholder="Nota para el transportista"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

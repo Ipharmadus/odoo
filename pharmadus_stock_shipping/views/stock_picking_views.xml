@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="view_picking_form_pharmadus_shipping" model="ir.ui.view">
+        <field name="name">stock.picking.form.pharmadus.shipping</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='operations']" position="after">
+                <page string="Detalle" name="pharmadus_detail"
+                      invisible="picking_type_code != 'outgoing'">
+                    <div class="d-flex gap-3 mb-2 text-muted">
+                        <span>Bultos calculados:
+                            <field name="pharmadus_total_packages" class="oe_inline"/>
+                        </span>
+                        <span>Completos:
+                            <field name="complete" class="oe_inline"/>
+                        </span>
+                        <span>Palets:
+                            <field name="number_of_palets" class="oe_inline"/>
+                        </span>
+                    </div>
+                    <field name="move_line_ids_without_package"
+                           readonly="state == 'cancel'">
+                        <list editable="bottom" create="0"
+                              default_order="pharmadus_bulto, pharmadus_palet, id">
+                            <field name="company_id" column_invisible="True"/>
+                            <field name="picking_id" column_invisible="True"/>
+                            <field name="move_id" column_invisible="True"/>
+                            <field name="state" column_invisible="True"/>
+                            <field name="product_id" readonly="1"/>
+                            <field name="lot_id"
+                                   groups="stock.group_production_lot"
+                                   width="160px"
+                                   readonly="state in ('done', 'cancel')"
+                                   domain="[('product_id', '=', product_id)]"/>
+                            <field name="quantity"
+                                   readonly="state in ('done', 'cancel')"/>
+                            <field name="product_uom_id"
+                                   groups="uom.group_uom"
+                                   readonly="1"/>
+                            <field name="pharmadus_split_button"
+                                   widget="pharmadus_split_button"
+                                   string=" "
+                                   width="30px"
+                                   invisible="state in ('done', 'cancel')"/>
+                            <field name="pharmadus_bulto"/>
+                            <field name="pharmadus_palet"/>
+                            <field name="pharmadus_complete" readonly="1"/>
+                            <field name="pharmadus_rest" readonly="1"/>
+                        </list>
+                    </field>
+                </page>
+                <page string="Expedición" name="pharmadus_expedition"
+                      invisible="picking_type_code != 'outgoing'">
+                    <group>
+                        <group>
+                            <field name="number_of_packages"/>
+                            <field name="pharmadus_total_packages"/>
+                            <field name="real_weight"/>
+                        </group>
+                        <group>
+                            <field name="complete"/>
+                            <field name="number_of_palets"/>
+                            <field name="pharmadus_expedition_weight"/>
+                        </group>
+                    </group>
+                    <div class="d-flex gap-2 mb-2">
+                        <button name="action_configure_bultos"
+                                string="Configurar bultos"
+                                type="object"
+                                class="btn btn-secondary"/>
+                        <button name="action_apply_expedition_weight"
+                                string="Aplicar peso a peso real"
+                                type="object"
+                                class="btn btn-link"
+                                invisible="pharmadus_expedition_weight == 0"/>
+                    </div>
+                    <field name="pharmadus_bulto_ids"
+                           readonly="state == 'cancel'">
+                        <list editable="bottom">
+                            <field name="number" readonly="1"/>
+                            <field name="product_id"/>
+                            <field name="name" optional="show"/>
+                            <field name="width"/>
+                            <field name="height"/>
+                            <field name="depth"/>
+                            <field name="weight"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+            <xpath expr="//header/button[@name='do_print_picking']" position="after">
+                <button name="action_pharmadus_assign_to_me"
+                        string="Asignarme albarán"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-user"
+                        invisible="not id"/>
+                <button name="action_print_internal_picking"
+                        string="Picking"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-print"
+                        invisible="picking_type_code != 'outgoing' or state == 'cancel'"/>
+                <button name="action_pharmadus_palet_labels"
+                        string="Etiq. palet"
+                        type="object"
+                        invisible="picking_type_code != 'outgoing' or state != 'done'"/>
+                <button name="action_pharmadus_bulto_labels"
+                        string="Etiq. bulto"
+                        type="object"
+                        invisible="picking_type_code != 'outgoing' or state != 'done'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

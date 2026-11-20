@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="paperformat_container_labels" model="report.paperformat">
+        <field name="name">Etiquetas de bulto (150x100 mm)</field>
+        <field name="format">custom</field>
+        <field name="dpi">90</field>
+        <field name="margin_top">3.5</field>
+        <field name="margin_bottom">5</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="page_height">100</field>
+        <field name="page_width">150</field>
+        <field name="orientation">Portrait</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+    </record>
+
+    <record id="paperformat_palet_labels" model="report.paperformat">
+        <field name="name">Etiquetas de palet (100x150 mm)</field>
+        <field name="format">custom</field>
+        <field name="dpi">90</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">5</field>
+        <field name="margin_left">5</field>
+        <field name="margin_right">5</field>
+        <field name="page_height">150</field>
+        <field name="page_width">100</field>
+        <field name="orientation">Portrait</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">5</field>
+    </record>
+
+    <record id="paperformat_delivery_note" model="report.paperformat">
+        <field name="name">Albarán de expedición (A4)</field>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">15</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">10</field>
+        <field name="margin_right">10</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">10</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_delivery_note" model="ir.actions.report">
+        <field name="name">Albarán de expedición</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_stock_shipping.report_delivery_note</field>
+        <field name="report_file">pharmadus_stock_shipping.report_delivery_note</field>
+        <field name="print_report_name">'Albarán - %s - %s' % (object.partner_id.name or '', object.name)</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_delivery_note"/>
+    </record>
+
+    <record id="action_report_bulto_labels" model="ir.actions.report">
+        <field name="name">Etiquetas de bulto</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_stock_shipping.report_bulto_labels</field>
+        <field name="report_file">pharmadus_stock_shipping.report_bulto_labels</field>
+        <field name="print_report_name">'Etiquetas bulto - %s' % object.name</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_container_labels"/>
+    </record>
+
+    <record id="action_report_palet_labels" model="ir.actions.report">
+        <field name="name">Etiquetas de palet</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_stock_shipping.report_palet_labels</field>
+        <field name="report_file">pharmadus_stock_shipping.report_palet_labels</field>
+        <field name="print_report_name">'Etiquetas palet - %s' % object.name</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_palet_labels"/>
+    </record>
+
+    <record id="action_report_palet_labels_gs1" model="ir.actions.report">
+        <field name="name">Etiquetas de palet GS1-128</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_stock_shipping.report_palet_labels_gs1_128</field>
+        <field name="report_file">pharmadus_stock_shipping.report_palet_labels_gs1_128</field>
+        <field name="print_report_name">'Etiquetas palet GS1 - %s' % object.name</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_palet_labels"/>
+    </record>
+
+    <record id="paperformat_expedition_report" model="report.paperformat">
+        <field name="name">Informe de expediciones (A4 horizontal)</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">5</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">5</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_expedition" model="ir.actions.report">
+        <field name="name">Informe de expedición</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_stock_shipping.report_expedition</field>
+        <field name="report_file">pharmadus_stock_shipping.report_expedition</field>
+        <field name="print_report_name">'Informe de expediciones - %s' % (object.name or '')</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_expedition_report"/>
+    </record>
+
+    <record id="paperformat_internal_picking" model="report.paperformat">
+        <field name="name">Albarán interno (A4)</field>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">7</field>
+        <field name="margin_bottom">31</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_internal_picking" model="ir.actions.report">
+        <field name="name">Picking</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pharmadus_stock_shipping.report_internal_picking</field>
+        <field name="report_file">pharmadus_stock_shipping.report_internal_picking</field>
+        <field name="print_report_name">'Informe interno - %s' % (object.name or '')</field>
+        <field name="paperformat_id" ref="paperformat_internal_picking"/>
+    </record>
+
+    <record id="action_report_expedition_xlsx" model="ir.actions.report">
+        <field name="name">Generar Excel</field>
+        <field name="model">stock.picking</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">pharmadus_stock_shipping.expedition_xlsx</field>
+        <field name="report_file">Expediciones</field>
+        <field name="binding_model_id" ref="stock.model_stock_picking"/>
+        <field name="binding_type">action</field>
+    </record>
+</odoo>

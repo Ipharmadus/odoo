@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <template id="report_internal_picking">
+        <t t-call="web.html_container">
+            <style type="text/css">
+                .pharmadus-internal-title {
+                    font-size: 30px;
+                    font-weight: bold;
+                    line-height: 1.2;
+                    margin: 45px 0 6px 0;
+                }
+                .pharmadus-internal-title-line {
+                    border-bottom: 2px solid #000;
+                    margin-bottom: 10px;
+                }
+                .pharmadus-internal-head {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 11px;
+                    margin-top: 40px;
+                }
+                .pharmadus-internal-head td {
+                    vertical-align: top;
+                    padding: 0;
+                }
+                .pharmadus-internal-head p {
+                    margin: 1px 0;
+                }
+                .pharmadus-internal-lines {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    font-size: 11px;
+                    margin-top: 7px;
+                }
+                .pharmadus-internal-lines th {
+                    border-bottom: 2px solid #000;
+                    border-right: 1px solid #000;
+                    padding: 5px 3px;
+                    text-align: left;
+                    vertical-align: bottom;
+                }
+                .pharmadus-internal-lines td {
+                    border-bottom: 1px solid #000;
+                    border-right: 1px solid #000;
+                    padding: 7px 3px;
+                    vertical-align: middle;
+                }
+                .pharmadus-internal-lines th:last-child,
+                .pharmadus-internal-lines td:last-child {
+                    border-right: none;
+                }
+                .pharmadus-internal-lines .center {
+                    text-align: center;
+                }
+                .pharmadus-internal-totals {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 12px;
+                    margin-top: 14px;
+                }
+                .pharmadus-internal-totals td {
+                    vertical-align: top;
+                    padding: 2px 0;
+                }
+                .pharmadus-internal-observations {
+                    margin-top: 22px;
+                    font-size: 12px;
+                }
+                .pharmadus-internal-client-address {
+                    font-size: 10px;
+                    line-height: 1.35;
+                }
+                .pharmadus-internal-client-address p {
+                    margin: 1.5px 0;
+                }
+            </style>
+            <t t-foreach="docs" t-as="o">
+                <t t-set="company" t-value="o.company_id"/>
+                <t t-set="sale" t-value="o.sale_id"/>
+                <t t-set="delivery" t-value="o.partner_id"/>
+                <t t-set="billing" t-value="sale.partner_id if sale else o.partner_id"/>
+                <div class="header pharmadus-page-number-header">
+                    <div style="text-align: right; font-size: 12px;">
+                        Página: <span class="page"/> / <span class="topage"/>
+                    </div>
+                </div>
+                <div class="pharmadus-internal-header">
+                    <style type="text/css">
+                        .pharmadus-internal-address {
+                            font-size: 10px;
+                            line-height: 1.35;
+                            margin-top: 8px;
+                        }
+                        .pharmadus-internal-address p {
+                            margin: 1.5px 0;
+                        }
+                    </style>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 100%; vertical-align: bottom;">
+                                <img t-if="o._pharmadus_company_logo_data()"
+                                     t-att-src="o._pharmadus_company_logo_data()"
+                                     height="45"
+                                     style="height: 45px; width: auto; margin-top: 10px;"/>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="border-bottom: 1px solid #000; margin-top: 4px;"/>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 52%; vertical-align: top;">
+                                <div class="pharmadus-internal-address">
+                                    <p><span t-out="company.partner_id.name"/></p>
+                                    <p t-if="company.partner_id.street">
+                                        <i class="fa fa-map-marker"/> <span t-out="company.partner_id.street"/>
+                                    </p>
+                                    <p>
+                                        <span t-out="company.partner_id.zip"/>
+                                        <span t-out="company.partner_id.city"/> -
+                                        <span t-out="company.partner_id.state_id.name"/>
+                                        (<span t-out="company.partner_id.country_id.name"/>)
+                                    </p>
+                                    <p t-if="company.partner_id.phone">
+                                        <i class="fa fa-phone"/> <span t-out="company.partner_id.phone"/>
+                                        <t t-if="company.partner_id.fax">
+                                            / <i class="fa fa-print"/> <span t-out="company.partner_id.fax"/>
+                                        </t>
+                                    </p>
+                                    <p t-if="company.partner_id.website">
+                                        <i class="fa fa-globe"/> <span t-out="company.partner_id.website"/>
+                                    </p>
+                                    <p t-if="company.partner_id.email">
+                                        <i class="fa fa-envelope"/> <span t-out="company.partner_id.email"/>
+                                    </p>
+                                    <p><i class="fa fa-briefcase"/> <span t-out="company.partner_id.vat"/></p>
+                                </div>
+                            </td>
+                            <td style="width: 8%;"/>
+                            <td class="pharmadus-internal-client-address" style="width: 40%; vertical-align: top; padding-top: 90px;">
+                                <p><strong>Dirección de cliente:</strong></p>
+                                <p><span t-out="(delivery.parent_id.name + ', ' + delivery.name) if delivery.parent_id else delivery.display_name"/></p>
+                                <p t-if="delivery.street"><span t-out="delivery.street"/></p>
+                                <p>
+                                    <span t-out="delivery.zip"/>
+                                    <span t-out="delivery.city"/> -
+                                    <span t-out="delivery.state_id.name"/>
+                                </p>
+                                <p><span t-out="delivery.country_id.name"/></p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="page pharmadus-internal-page">
+                    <h2 class="pharmadus-internal-title">
+                        <span t-field="o.picking_type_id"/>: <span t-field="o.name"/>
+                    </h2>
+                    <div class="pharmadus-internal-title-line"/>
+
+                    <table class="pharmadus-internal-head">
+                        <tr>
+                            <td style="width: 40%;">
+                                <p><strong>Dirección de facturación:</strong></p>
+                                <p><span t-out="billing.name"/></p>
+                                <p t-if="billing.street"><span t-out="billing.street"/></p>
+                                <p>
+                                    <span t-out="billing.zip"/>
+                                    <span t-out="billing.city"/> -
+                                    <span t-out="billing.state_id.name"/>
+                                    (<span t-out="billing.country_id.name"/>)
+                                </p>
+                                <p t-if="billing.phone"><i class="fa fa-phone"/> <span t-out="billing.phone"/></p>
+                                <p t-if="billing.vat"><i class="fa fa-briefcase"/> <span t-out="billing.vat"/></p>
+                            </td>
+                            <td style="width: 5%;"/>
+                            <td style="width: 30%;">
+                                <p><strong>Código cliente:</strong> <span t-out="billing.ref"/></p>
+                                <p><strong>Orden de origen:</strong> <span t-out="o.origin"/></p>
+                                <p t-if="sale and sale.sale_channel_id">
+                                    <strong>Canal:</strong> <span t-out="sale.sale_channel_id.name"/>
+                                </p>
+                                <p t-if="sale and sale.payment_mode_id">
+                                    <strong>Forma de pago:</strong><br/>
+                                    <span t-out="sale.payment_mode_id.name"/>
+                                </p>
+                            </td>
+                            <td style="width: 5%;"/>
+                            <td style="width: 20%;">
+                                <p>
+                                    <strong>Fecha prevista:</strong><br/>
+                                    <span t-out="o.scheduled_date.strftime('%d/%m/%Y %H:%M:%S') if o.scheduled_date else ''"/>
+                                </p>
+                                <p t-if="sale and sale.client_order_ref">
+                                    <strong>Referencia de pedido:</strong><br/>
+                                    <span t-out="sale.client_order_ref"/>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <t t-set="report_lines" t-value="o._pharmadus_picking_sheet_lines()"/>
+                    <table class="pharmadus-internal-lines">
+                        <thead>
+                            <tr>
+                                <th style="width: 7%;">(C+R)</th>
+                                <th style="width: 6%;">Palet</th>
+                                <th style="width: 8%;">Completos</th>
+                                <th style="width: 6%;">Bulto</th>
+                                <th style="width: 6%;">Resto</th>
+                                <th style="width: 28%;">Descripción</th>
+                                <th style="width: 9%;">Cantidad</th>
+                                <th style="width: 10%;">Lote sugerido</th>
+                                <th style="width: 10%;">Cantidad</th>
+                                <th style="width: 10%;">Lote</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="report_lines" t-as="line">
+                                <td class="center">
+                                    <span t-out="'(%g+%g)' % (line['complete'], line['rest'])"/>
+                                </td>
+                                <td class="center"><span t-out="line['palet'] or ''"/></td>
+                                <td class="center"><span t-out="line['complete'] or ''"/></td>
+                                <td class="center"><span t-out="line['bulto'] or ''"/></td>
+                                <td class="center">
+                                    <span t-out="'%g' % line['rest'] if line['rest'] else ''"/>
+                                </td>
+                                <td><span t-out="line['product'].name"/></td>
+                                <td class="center"><span t-out="'%g' % line['quantity']"/></td>
+                                <td><span t-out="line['lot'].name"/></td>
+                                <td/>
+                                <td/>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table class="pharmadus-internal-totals">
+                        <tr>
+                            <td style="width: 30%;">
+                                <strong>Completos:</strong> <span t-out="'%g' % o.complete"/>
+                            </td>
+                            <td style="width: 35%;">
+                                <strong>Transportista:</strong>
+                                <span t-out="(o.carrier_id.name or '').split(':')[0].strip()"/>
+                                <br/>
+                                <strong>Total bultos:</strong>
+                                <span style="display: inline-block; width: 110px; border-bottom: 1px solid #000;">&amp;nbsp;</span>
+                            </td>
+                            <td style="width: 35%;">
+                                <strong>Peso real:</strong>
+                                <t t-if="o.real_weight">
+                                    <span t-out="'%g' % o.real_weight"/> kg
+                                    (Estimado: <span t-out="'%.2f' % o.weight"/>)
+                                </t>
+                                <t t-else="">&amp;nbsp;</t>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <div class="pharmadus-internal-observations">
+                        <strong>Observaciones:</strong>
+                        <p t-if="o.note" t-field="o.note"/>
+                    </div>
+                </div>
+
+                <div class="footer pharmadus-internal-footer">
+                    <style type="text/css">
+                        .footer-help {
+                            font-size: 12px;
+                            margin: 7px 0 8px 0;
+                        }
+                        .footer-legal {
+                            font-size: 7px;
+                            line-height: 1.2;
+                            margin: 0;
+                        }
+                    </style>
+                    <div style="border-top: 1px solid #000; padding-top: 5px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="vertical-align: top; padding-left: 90px;">
+                                    <p class="footer-help">
+                                        Para cualquier duda o aclaración, póngase en contacto con el Dpto. de Ventas en el teléfono
+                                        <b><span t-out="company.phone"/></b>, o en el e-mail
+                                        <span t-out="'ventas@pharmadus.com' if company.id == 1 else company.email"/>.
+                                    </p>
+                                    <p class="footer-legal">
+                                        Inscrita en el Registro Mercantil de León, Tomo 985, Gral., Inscrip. 1ª, Folio 195, Hoja LE-13873, Fecha 23/09/2003. NIF <span t-out="company.partner_id.vat"/>.
+                                    </p>
+                                    <t t-if="company.id == 1">
+                                        <p class="footer-legal">
+                                            Pharmadus Botanicals S.L. es el Responsable del tratamiento de los datos personales proporcionados bajo su consentimiento y le informa que estos datos serán tratados de conformidad con lo dispuesto en el Reglamento (UE) 2016/679 de 27 de abril (GDPR) y la Ley Orgánica 3/2018 de 5 de diciembre (LOPDGDD), con la finalidad de mantener una relación comercial y conservarlos durante no más tiempo del necesario para mantener el fin del tratamiento y cuando ya no sea necesario para tal fin, se suprimirán con medidas de seguridad adecuadas para garantizar la seudonimización de los datos o la destrucción total de los mismos. No se comunicarán los datos a terceros, salvo obligación legal. Asimismo, se informa que puede ejercer los derechos de acceso, rectificación, portabilidad y supresión de sus datos y los de limitación y oposición a su tratamiento dirigiéndose a Pharmadus Botanicals S.L. en Polígono Industrial de Camponaraya, sector 2, parcela 3, - 24410 Camponaraya (León). Email: info@pharmadus.com y el de reclamación a www.aepd.es.
+                                        </p>
+                                        <p class="footer-legal">
+                                            Envases y residuos: Según Ley 11/97, el último proveedor del envase será encargado de la gestión del residuo. Según RD1055/2022, nuestro num. de registro de productores de producto: ENV/2023/000007149 # FLO ID: 27096
+                                        </p>
+                                    </t>
+                                </td>
+                                <td style="width: 90px; text-align: right; vertical-align: top;">
+                                    <img t-if="o._pharmadus_internal_footer_logo()"
+                                         t-att-src="o._pharmadus_internal_footer_logo()"
+                                         style="width: 78px;"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>
